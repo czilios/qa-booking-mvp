@@ -1,0 +1,21 @@
+services:
+  mariadb:
+    image: mariadb:10.11
+    container_name: qa-booking-mariadb
+    restart: unless-stopped
+
+    environment:
+      MARIADB_ROOT_PASSWORD: root_test_password
+      MARIADB_DATABASE: wrzosowo_booking_test
+      MARIADB_USER: booking_test
+      MARIADB_PASSWORD: booking_test
+
+    ports:
+      - "3307:3306"
+
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./database/migrations:/docker-entrypoint-initdb.d:ro
+
+volumes:
+  mariadb_data:
