@@ -1,5 +1,6 @@
 from datetime import datetime
 from pymysql.connections import Connection
+from app.repositories.reservation_repository import ReservationRepository
 
 
 def confirm_reservation_after_deposit(
@@ -61,16 +62,6 @@ def expire_pending_reservations(
     connection: Connection,
     now: datetime,
 ) -> int:
-    with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            UPDATE reservations
-            SET status = 'EXPIRED'
-            WHERE status = 'PENDING'
-              AND expires_at IS NOT NULL
-              AND expires_at <= %s
-            """,
-            (now,),
-        )
+    repository = ReservationRepository(connection)
 
-        return cursor.rowcount
+    return repository.expire_pending_reservations(now)
