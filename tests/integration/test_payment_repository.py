@@ -161,3 +161,88 @@ def test_mark_payment_as_paid_does_not_change_reservation_status(
     assert payment["paid_at"] == paid_at
 
     assert reservation["status"] == "PENDING"
+
+def test_get_paid_payments_for_month(
+    db_connection,
+):
+    reservation_repository = ReservationRepository(db_connection)
+    payment_repository = PaymentRepository(db_connection)
+
+    reservation_id = reservation_repository.create(
+        cottage_id=1,
+        source_id=1,
+        check_in=date(2026, 8, 20),
+        check_out=date(2026, 8, 25),
+        guests_count=2,
+        status="CONFIRMED",
+    )
+
+    payment_id = payment_repository.create_payment(
+        reservation_id=reservation_id,
+        payment_type="DEPOSIT",
+        amount=Decimal("400.00"),
+    )
+
+    paid_at = datetime(2026, 8, 17, 14, 30, 0)
+
+    payment_repository.mark_payment_as_paid(
+        payment_id,
+        paid_at,
+    )
+
+    payments = payment_repository.get_paid_payments_for_month(
+        2026,
+        8,
+    )
+
+    assert len(payments) == 1
+
+    payment = payments[0]
+
+    assert payment["payment_id"] == payment_id
+    assert payment["reservation_id"] == reservation_id
+    assert payment["payment_type"] == "DEPOSIT"
+    assert payment["amount"] == Decimal("400.00")
+    assert payment["paid_at"] == paid_at
+
+    assert payment["cottage_id"] == 1
+    assert payment["check_in"] == date(2026, 8, 20)
+    assert payment["check_out"] == date(2026, 8, 25)
+
+    assert payment["source_code"] == "DIRECT"
+    assert payment["source_name"] == "Rezerwacja własna"
+
+def test_get_paid_payments_for_month_excludes_other_months(
+    db_connection,
+):
+    reservation_repository = ReservationRepository(db_connection)
+    payment_repository = PaymentRepository(db_connection)
+
+    reservation_id = reservation_repository.create(
+        cottage_id=1,
+        source_id=1,
+        check_in=date(2026, 9, 1),
+        check_out=date(2026, 9, 7),
+        guests_count=2,
+        status="CONFIRMED",
+    )
+
+    payment_id = payment_repository.create_payment(
+        reservation_id=reservation_id,
+        payment_type="DEPOSIT",
+        amount=Decimal("500.00"),
+    )
+
+    payment_repository.mark_payment_as_paid(
+        payment_id,
+        datetime(2026, 7, 31, 23, 59, 59),
+    )
+
+    payments = payment_repository.get_paid_payments_for_month(
+        2026,
+        8,
+    )
+
+    assert len(payments) == 0
+
+

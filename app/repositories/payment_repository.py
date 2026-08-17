@@ -154,4 +154,83 @@ class PaymentRepository:
             )
 
             return cursor.fetchone()
-        
+    def get_paid_payments_for_month(
+    self,
+    year: int,
+    month: int,
+    ):
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+            """
+            SELECT
+                p.id AS payment_id,
+                p.reservation_id,
+                p.type AS payment_type,
+                p.amount,
+                p.paid_at,
+
+                r.cottage_id,
+                r.check_in,
+                r.check_out,
+
+                rs.code AS source_code,
+                rs.name AS source_name
+
+            FROM payments p
+
+            JOIN reservations r
+                ON r.id = p.reservation_id
+
+            JOIN reservation_sources rs
+                ON rs.id = r.source_id
+
+            WHERE p.status = 'PAID'
+              AND YEAR(p.paid_at) = %s
+              AND MONTH(p.paid_at) = %s
+
+            ORDER BY p.paid_at, p.id
+            """,
+            (year, month),
+        )
+
+        return cursor.fetchall()
+    def get_paid_payments_for_month(
+    self,
+    year: int,
+    month: int,
+    ):
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+            """
+            SELECT
+                p.id AS payment_id,
+                p.reservation_id,
+                p.type AS payment_type,
+                p.amount,
+                p.paid_at,
+
+                r.cottage_id,
+                r.check_in,
+                r.check_out,
+
+                rs.code AS source_code,
+                rs.name AS source_name
+
+            FROM payments p
+
+            JOIN reservations r
+                ON r.id = p.reservation_id
+
+            JOIN reservation_sources rs
+                ON rs.id = r.source_id
+
+            WHERE p.status = 'PAID'
+              AND YEAR(p.paid_at) = %s
+              AND MONTH(p.paid_at) = %s
+
+            ORDER BY p.paid_at, p.id
+            """,
+            (year, month),
+        )
+
+        return cursor.fetchall()
