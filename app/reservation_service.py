@@ -1,63 +1,41 @@
 from datetime import datetime
 from pymysql.connections import Connection
 from app.repositories.reservation_repository import ReservationRepository
+from app.repositories.payment_repository import PaymentRepository
 
 
 def confirm_reservation_after_deposit(
-    connection: Connection,
+    connection,
     reservation_id: int,
 ) -> None:
-    with connection.cursor() as cursor:
-        # Check reservation
-        cursor.execute(
-            """
-            SELECT id, status
-            FROM reservations
-            WHERE id = %s
-            FOR UPDATE
-            """,
-            (reservation_id,),
-        )
+    reservation_repository = ReservationRepository(connection)
+    payment_repository = PaymentRepository(connection)
 
-        reservation = cursor.fetchone()
+    reservation = reservation_repository.get_by_id_for_update(
+        reservation_id
+    )
 
-        if reservation is None:
-            raise ValueError("Reservation not found")
+    if reservation is None:
+        raise ValueError("Reservation not found")
 
-        if reservation["status"] != "PENDING":
-            raise ValueError("Reservation is not PENDING")
+    if reservation["status"] != "PENDING":
+        raise ValueError("Reservation is not PENDING")
 
-        # Check deposit
-        cursor.execute(
-            """
-            SELECT id, status
-            FROM payments
-            WHERE reservation_id = %s
-              AND type = 'DEPOSIT'
-            ORDER BY id
-            LIMIT 1
-            FOR UPDATE
-            """,
-            (reservation_id,),
-        )
+    deposit = payment_repository.get_deposit_payment_for_update(
+        reservation_id
+    )
 
-        deposit = cursor.fetchone()
+    if deposit is None:
+        raise ValueError("Deposit not found")
 
-        if deposit is None:
-            raise ValueError("Deposit not found")
+    if deposit["status"] != "PAID":
+        raise ValueError("Deposit is not PAID")
 
-        if deposit["status"] != "PAID":
-            raise ValueError("Deposit is not PAID")
-
-        # Confirm reservation
-        cursor.execute(
-            """
-            UPDATE reservations
-            SET status = 'CONFIRMED'
-            WHERE id = %s
-            """,
-            (reservation_id,),
-        )
+    reservation_repository.update_status(
+        reservation_id,
+        "CONFIRMED",
+    )
+    
 def expire_pending_reservations(
     connection: Connection,
     now: datetime,
