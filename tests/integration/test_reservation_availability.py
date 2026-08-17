@@ -419,3 +419,105 @@ def test_find_available_cottages_returns_only_available_cottages(
     )
 
     assert available_cottages == [4, 6]
+
+def test_cancelled_reservation_does_not_block_cottage(db_connection):
+    with db_connection.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO reservations (
+                cottage_id,
+                source_id,
+                check_in,
+                check_out,
+                guests_count,
+                status
+            )
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (
+                1,
+                1,
+                date(2026, 9, 20),
+                date(2026, 9, 25),
+                2,
+                "CANCELLED",
+            ),
+        )
+
+        reservation_id = cursor.lastrowid
+
+        cursor.execute(
+            """
+            SELECT
+                cottage_id,
+                check_in,
+                check_out,
+                status
+            FROM reservations
+            WHERE id = %s
+            """,
+            (reservation_id,),
+        )
+
+        reservation = cursor.fetchone()
+
+    available_cottages = find_available_cottages(
+        cottage_ids=[1, 2, 3, 4, 5, 6],
+        reservations=[reservation],
+        new_check_in=date(2026, 9, 20),
+        new_check_out=date(2026, 9, 25),
+        blocks=[],
+    )
+
+    assert 1 in available_cottages
+
+def test_expired_reservation_does_not_block_cottage(db_connection):
+    with db_connection.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO reservations (
+                cottage_id,
+                source_id,
+                check_in,
+                check_out,
+                guests_count,
+                status
+            )
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (
+                1,
+                1,
+                date(2026, 9, 20),
+                date(2026, 9, 25),
+                2,
+                "EXPIRED",
+            ),
+        )
+
+        reservation_id = cursor.lastrowid
+
+        cursor.execute(
+            """
+            SELECT
+                cottage_id,
+                check_in,
+                check_out,
+                status
+            FROM reservations
+            WHERE id = %s
+            """,
+            (reservation_id,),
+        )
+
+        reservation = cursor.fetchone()
+
+    available_cottages = find_available_cottages(
+        cottage_ids=[1, 2, 3, 4, 5, 6],
+        reservations=[reservation],
+        new_check_in=date(2026, 9, 20),
+        new_check_out=date(2026, 9, 25),
+        blocks=[],
+    )
+
+    assert 1 in available_cottages
