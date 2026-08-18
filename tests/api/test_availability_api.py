@@ -1,16 +1,9 @@
 from datetime import date
 from fastapi.testclient import TestClient
+import pytest
 from app.repositories.reservation_repository import ReservationRepository
 from app.main import app, get_db_connection
-import pytest
 
-@pytest.fixture
-def api_client(db_connection):
-    app.dependency_overrides[get_db_connection] = lambda: db_connection
-
-    yield TestClient(app)
-
-    app.dependency_overrides.clear()
 
 def test_get_availability_returns_200(api_client):
     response = api_client.get(

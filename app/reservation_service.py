@@ -2,6 +2,9 @@ from datetime import datetime
 from pymysql.connections import Connection
 from app.repositories.reservation_repository import ReservationRepository
 from app.repositories.payment_repository import PaymentRepository
+from app.availability_service import AvailabilityService
+from app.repositories.block_repository import BlockRepository
+from app.repositories.cottage_repository import CottageRepository
 
 
 def confirm_reservation_after_deposit(
@@ -43,3 +46,44 @@ def expire_pending_reservations(
     repository = ReservationRepository(connection)
 
     return repository.expire_pending_reservations(now)
+
+def create_reservation(
+    connection: Connection,
+    cottage_id: int,
+    source_id: int,
+    check_in: datetime,
+    check_out: datetime,
+    guests_count: int,
+) -> int:
+    reservation_repository = ReservationRepository(connection)
+
+    availability_service = AvailabilityService(
+        reservation_repository=reservation_repository,
+        block_repository=BlockRepository(connection),
+        cottage_repository=CottageRepository(connection),
+    )
+
+    cottage_repository = CottageRepository(connection)
+    cottage = cottage_repository.get_by_id(cottage_id)
+
+    if cottage is None:
+        raise ValueError("Cottage not found")
+
+    if guests_count > cottage["capacity"]:
+        raise ValueError("Too many guests for this cottage")
+
+    available_cottages = availability_service.get_available_cottages(
+        check_in=check_in,
+        check_out=check_out,
+    )
+
+    if cottage_id not in available_cottages:
+        raise ValueError("Cottage is not available")
+
+    return reservation_repository.create(
+        cottage_id=cottage_id,
+        source_id=source_id,
+        check_in=check_in,
+        check_out=check_out,
+        guests_count=guests_count,
+    )

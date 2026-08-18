@@ -57,4 +57,12 @@ System określa dostępność domku na podstawie godzin check-out i check-in okr
 
 Rezerwacja nie powoduje konfliktu, jeżeli poprzedni pobyt kończy się o godzinie check-out przed rozpoczęciem kolejnego pobytu, z uwzględnieniem minimalnego czasu umożliwiającego przygotowanie domku.
 
+##PET-01
+Zwierzęta nie są wliczane do `cottage.capacity`.
 
+##PET-02
+Maksymalnie 2 zwierzęta na rezerwację.
+
+##PET-03
+Opłata za zwierzę wynosi 25 PLN za cały pobyt,
+niezależnie od liczby zwierząt.
