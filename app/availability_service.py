@@ -13,9 +13,10 @@ class AvailabilityService:
         self.cottage_repository = cottage_repository
 
     def get_available_cottages(
-        self,
-        check_in,
-        check_out,
+    self,
+    check_in,
+    check_out,
+    exclude_reservation_id=None,
     ):
         cottage_ids = (
             self.cottage_repository
@@ -38,4 +39,5 @@ class AvailabilityService:
             new_check_in=check_in,
             new_check_out=check_out,
             blocks=blocks,
+            exclude_reservation_id=exclude_reservation_id,
         )

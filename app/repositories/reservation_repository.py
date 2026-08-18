@@ -139,4 +139,37 @@ class ReservationRepository:
         )
 
         return cursor.fetchall()
+    def update(
+    self,
+    reservation_id: int,
+    cottage_id: int,
+    source_id: int,
+    check_in: date,
+    check_out: date,
+    guests_count: int,
+) -> None:
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+            """
+            UPDATE reservations
+            SET
+                cottage_id = %s,
+                source_id = %s,
+                check_in = %s,
+                check_out = %s,
+                guests_count = %s
+            WHERE id = %s
+            """,
+            (
+                cottage_id,
+                source_id,
+                check_in,
+                check_out,
+                guests_count,
+                reservation_id,
+            ),
+        )
+
+        if cursor.rowcount == 0:
+            raise ValueError("Reservation not found")
     

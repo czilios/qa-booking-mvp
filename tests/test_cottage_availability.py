@@ -172,3 +172,24 @@ def test_cancelled_reservation_does_not_block_cottage():
     )
 
     assert result is False
+def test_excluded_reservation_does_not_block_itself():
+    reservations = [
+        {
+            "id": 1,
+            "cottage_id": 1,
+            "check_in": date(2026, 8, 17),
+            "check_out": date(2026, 8, 23),
+            "status": "CONFIRMED",
+        }
+    ]
+
+    result = find_available_cottages(
+        COTTAGES,
+        reservations,
+        date(2026, 8, 17),
+        date(2026, 8, 23),
+        [],
+        exclude_reservation_id=1,
+    )
+
+    assert 1 in result

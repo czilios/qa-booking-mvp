@@ -1,4 +1,5 @@
 from datetime import date, datetime
+import pytest
 
 from app.repositories.reservation_repository import ReservationRepository
 
@@ -86,3 +87,42 @@ def test_get_active_reservations(db_connection):
     assert pending_id in reservation_ids
     assert confirmed_id in reservation_ids
     assert cancelled_id not in reservation_ids
+
+def test_update_reservation(db_connection):
+    repository = ReservationRepository(db_connection)
+
+    reservation_id = repository.create(
+        cottage_id=1,
+        source_id=1,
+        check_in=date(2027, 8, 10),
+        check_out=date(2027, 8, 17),
+        guests_count=2,
+    )
+
+    repository.update(
+        reservation_id=reservation_id,
+        cottage_id=2,
+        source_id=1,
+        check_in=date(2027, 8, 20),
+        check_out=date(2027, 8, 27),
+        guests_count=3,
+    )
+
+    reservation = repository.get_by_id(reservation_id)
+
+    assert reservation["cottage_id"] == 2
+    assert reservation["check_in"] == date(2027, 8, 20)
+    assert reservation["check_out"] == date(2027, 8, 27)
+    assert reservation["guests_count"] == 3
+def test_update_nonexistent_reservation_raises_error(db_connection):
+    repository = ReservationRepository(db_connection)
+
+    with pytest.raises(ValueError, match="Reservation not found"):
+        repository.update(
+            reservation_id=999999,
+            cottage_id=1,
+            source_id=1,
+            check_in=date(2027, 8, 20),
+            check_out=date(2027, 8, 27),
+            guests_count=2,
+        )

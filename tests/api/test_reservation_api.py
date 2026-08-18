@@ -14,6 +14,7 @@ def test_create_reservation_returns_201(api_client):
             "guests_count": 2,
         },
     )
+    print(response.json())
 
     assert response.status_code == 201
 
@@ -77,3 +78,16 @@ def test_create_reservation_rejects_too_many_guests(
     )
 
     assert response.status_code == 409
+def test_create_reservation_rejects_negative_guests(api_client):
+    response = api_client.post(
+        "/api/reservations",
+        json={
+            "cottage_id": 1,
+            "source_id": 1,
+            "check_in": "2027-08-10",
+            "check_out": "2027-08-17",
+            "guests_count": -1,
+        },
+    )
+
+    assert response.status_code == 422

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 from pymysql.connections import Connection
 from app.repositories.reservation_repository import ReservationRepository
 from app.repositories.payment_repository import PaymentRepository
@@ -81,6 +81,49 @@ def create_reservation(
         raise ValueError("Cottage is not available")
 
     return reservation_repository.create(
+        cottage_id=cottage_id,
+        source_id=source_id,
+        check_in=check_in,
+        check_out=check_out,
+        guests_count=guests_count,
+    )
+def update_reservation(
+    connection: Connection,
+    reservation_id: int,
+    cottage_id: int,
+    source_id: int,
+    check_in: date,
+    check_out: date,
+    guests_count: int,
+) -> None:
+    reservation_repository = ReservationRepository(connection)
+    cottage_repository = CottageRepository(connection)
+
+    cottage = cottage_repository.get_by_id(cottage_id)
+
+    if cottage is None:
+        raise ValueError("Cottage not found")
+
+    if guests_count > cottage["capacity"]:
+        raise ValueError("Too many guests for this cottage")
+
+    availability_service = AvailabilityService(
+        reservation_repository=reservation_repository,
+        block_repository=BlockRepository(connection),
+        cottage_repository=cottage_repository,
+    )
+
+    available_cottages = availability_service.get_available_cottages(
+        check_in=check_in,
+        check_out=check_out,
+        exclude_reservation_id=reservation_id,
+    )
+
+    if cottage_id not in available_cottages:
+        raise ValueError("Cottage is not available")
+
+    reservation_repository.update(
+        reservation_id=reservation_id,
         cottage_id=cottage_id,
         source_id=source_id,
         check_in=check_in,

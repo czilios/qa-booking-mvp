@@ -2,17 +2,24 @@ from datetime import date
 
 from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel, Field
+
 from app.availability_service import AvailabilityService
 from app.database import get_connection
 from app.repositories.block_repository import BlockRepository
 from app.repositories.cottage_repository import CottageRepository
 from app.repositories.reservation_repository import ReservationRepository
-from app.reservation_service import create_reservation
+from app.reservation_service import create_reservation, update_reservation
 
 
 app = FastAPI()
-
 class ReservationCreate(BaseModel):
+    cottage_id: int
+    source_id: int
+    check_in: date
+    check_out: date
+    guests_count: int = Field(gt=0)
+
+class ReservationUpdate(BaseModel):
     cottage_id: int
     source_id: int
     check_in: date
@@ -86,8 +93,50 @@ def create_reservation_endpoint(
             check_out=reservation.check_out,
             guests_count=reservation.guests_count,
         )
-    except ValueError as error:
+    except ValueError as exc:
+        if str(exc) == "Reservation not found":
+            raise HTTPException(
+                status_code=404,
+                detail=str(exc),
+            )
+
         raise HTTPException(
             status_code=409,
-            detail=str(error),
+            detail=str(exc),
         )
+
+@app.put("/api/reservations/{reservation_id}")
+def update_reservation_endpoint(
+    reservation_id: int,
+    reservation: ReservationUpdate,
+    db_connection=Depends(get_db_connection),
+):
+    if reservation.check_out <= reservation.check_in:
+        raise HTTPException(
+            status_code=400,
+            detail="check_out must be after check_in",
+        )
+
+    try:
+        update_reservation(
+            connection=db_connection,
+            reservation_id=reservation_id,
+            cottage_id=reservation.cottage_id,
+            source_id=reservation.source_id,
+            check_in=reservation.check_in,
+            check_out=reservation.check_out,
+            guests_count=reservation.guests_count,
+        )
+    except ValueError as exc:
+        if str(exc) == "Reservation not found":
+            raise HTTPException(
+                status_code=404,
+                detail=str(exc),
+            )
+
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        )
+
+    return {"message": "Reservation updated"}

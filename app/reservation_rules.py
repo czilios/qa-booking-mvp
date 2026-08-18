@@ -50,9 +50,16 @@ def cottage_is_available(
     blocks: list[dict],
     new_check_in: date,
     new_check_out: date,
+    exclude_reservation_id: int | None = None,
 ) -> bool:
 
     for reservation in reservations:
+        if (
+            exclude_reservation_id is not None
+            and reservation["id"] == exclude_reservation_id
+        ):
+            continue
+
         if reservation["cottage_id"] != cottage_id:
             continue
 
@@ -83,6 +90,7 @@ def find_available_cottages(
     new_check_in: date,
     new_check_out: date,
     blocks: list[dict],
+    exclude_reservation_id: int | None = None,
 ) -> list[int]:
 
     return [
@@ -94,5 +102,6 @@ def find_available_cottages(
             blocks,
             new_check_in,
             new_check_out,
+            exclude_reservation_id,
         )
     ]
