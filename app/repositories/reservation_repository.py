@@ -123,24 +123,20 @@ class ReservationRepository:
             )
 
             return cursor.rowcount
-    def get_by_id_for_update(self, reservation_id: int):
+    def get_active_reservations(self):
         with self.connection.cursor() as cursor:
             cursor.execute(
             """
             SELECT
                 id,
                 cottage_id,
-                source_id,
                 check_in,
                 check_out,
-                guests_count,
-                status,
-                expires_at
+                status
             FROM reservations
-            WHERE id = %s
-            FOR UPDATE
-            """,
-            (reservation_id,),
+            WHERE status IN ('PENDING', 'CONFIRMED')
+            """
         )
 
-        return cursor.fetchone()
+        return cursor.fetchall()
+    

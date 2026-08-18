@@ -45,3 +45,44 @@ def test_get_reservation_by_id_for_update(db_connection):
     assert reservation["id"] == reservation_id
     assert reservation["cottage_id"] == 1
     assert reservation["status"] == "PENDING"
+
+def test_get_active_reservations(db_connection):
+    repository = ReservationRepository(db_connection)
+
+    pending_id = repository.create(
+        cottage_id=1,
+        source_id=1,
+        check_in=date(2027, 7, 10),
+        check_out=date(2027, 7, 17),
+        guests_count=2,
+        status="PENDING",
+    )
+
+    confirmed_id = repository.create(
+        cottage_id=2,
+        source_id=1,
+        check_in=date(2027, 7, 10),
+        check_out=date(2027, 7, 17),
+        guests_count=2,
+        status="CONFIRMED",
+    )
+
+    cancelled_id = repository.create(
+        cottage_id=3,
+        source_id=1,
+        check_in=date(2027, 7, 10),
+        check_out=date(2027, 7, 17),
+        guests_count=2,
+        status="CANCELLED",
+    )
+
+    reservations = repository.get_active_reservations()
+
+    reservation_ids = {
+        reservation["id"]
+        for reservation in reservations
+    }
+
+    assert pending_id in reservation_ids
+    assert confirmed_id in reservation_ids
+    assert cancelled_id not in reservation_ids
