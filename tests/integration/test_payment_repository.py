@@ -31,6 +31,7 @@ def test_payment_repository_creates_payment(db_connection):
     assert payment["type"] == "DEPOSIT"
     assert payment["amount"] == Decimal("500.00")
     assert payment["status"] == "UNPAID"
+
 def test_get_payment_by_reservation_id(db_connection):
     reservation_repository = ReservationRepository(db_connection)
     payment_repository = PaymentRepository(db_connection)
@@ -96,6 +97,7 @@ def test_get_deposit_payment_by_reservation_id(db_connection):
     assert deposit["type"] == "DEPOSIT"
     assert deposit["amount"] == Decimal("500.00")
     assert deposit["status"] == "UNPAID"
+
 def test_mark_payment_as_paid(db_connection):
     reservation_repository = ReservationRepository(db_connection)
     payment_repository = PaymentRepository(db_connection)
@@ -204,11 +206,9 @@ def test_get_paid_payments_for_month(
     assert payment["payment_type"] == "DEPOSIT"
     assert payment["amount"] == Decimal("400.00")
     assert payment["paid_at"] == paid_at
-
     assert payment["cottage_id"] == 1
     assert payment["check_in"] == date(2026, 8, 20)
     assert payment["check_out"] == date(2026, 8, 25)
-
     assert payment["source_code"] == "DIRECT"
     assert payment["source_name"] == "Rezerwacja własna"
 
@@ -244,5 +244,3 @@ def test_get_paid_payments_for_month_excludes_other_months(
     )
 
     assert len(payments) == 0
-
-

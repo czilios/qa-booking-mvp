@@ -114,6 +114,7 @@ def test_update_reservation(db_connection):
     assert reservation["check_in"] == date(2027, 8, 20)
     assert reservation["check_out"] == date(2027, 8, 27)
     assert reservation["guests_count"] == 3
+    
 def test_update_nonexistent_reservation_raises_error(db_connection):
     repository = ReservationRepository(db_connection)
 
@@ -125,4 +126,40 @@ def test_update_nonexistent_reservation_raises_error(db_connection):
             check_in=date(2027, 8, 20),
             check_out=date(2027, 8, 27),
             guests_count=2,
+        )
+
+def test_cancel_reservation(db_connection):
+    repository = ReservationRepository(db_connection)
+
+    reservation_id = repository.create(
+        cottage_id=1,
+        source_id=1,
+        check_in=date(2027, 9, 10),
+        check_out=date(2027, 9, 17),
+        guests_count=2,
+    )
+
+    repository.update_status(
+        reservation_id=reservation_id,
+        status="CANCELLED",
+    )
+
+    reservation = repository.get_by_id_for_update(
+        reservation_id
+    )
+
+    assert reservation["status"] == "CANCELLED"
+
+def test_update_status_nonexistent_reservation_raises_error(
+    db_connection,
+):
+    repository = ReservationRepository(db_connection)
+
+    with pytest.raises(
+        ValueError,
+        match="Reservation not found",
+    ):
+        repository.update_status(
+            reservation_id=999999,
+            status="CANCELLED",
         )

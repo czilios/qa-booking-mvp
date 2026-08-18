@@ -2,6 +2,8 @@ from datetime import date
 import pytest
 from app.repositories.reservation_repository import ReservationRepository
 from app.reservation_service import update_reservation
+from app.reservation_service import cancel_reservation
+
 
 
 def test_update_reservation_changes_reservation(db_connection):
@@ -62,4 +64,38 @@ def test_update_reservation_rejects_conflicting_cottage(
             check_in=date(2027, 8, 22),
             check_out=date(2027, 8, 25),
             guests_count=2,
+        )
+def test_cancel_reservation_changes_status(db_connection):
+    repository = ReservationRepository(db_connection)
+
+    reservation_id = repository.create(
+        cottage_id=1,
+        source_id=1,
+        check_in=date(2027, 9, 10),
+        check_out=date(2027, 9, 17),
+        guests_count=2,
+    )
+
+    cancel_reservation(
+        connection=db_connection,
+        reservation_id=reservation_id,
+    )
+
+    reservation = repository.get_by_id_for_update(
+        reservation_id
+    )
+
+    assert reservation["status"] == "CANCELLED"
+
+
+def test_cancel_nonexistent_reservation_raises_error(
+    db_connection,
+):
+    with pytest.raises(
+        ValueError,
+        match="Reservation not found",
+    ):
+        cancel_reservation(
+            connection=db_connection,
+            reservation_id=999999,
         )

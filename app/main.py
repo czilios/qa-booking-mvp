@@ -2,7 +2,7 @@ from datetime import date
 
 from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel, Field
-
+from app.reservation_service import cancel_reservation
 from app.availability_service import AvailabilityService
 from app.database import get_connection
 from app.repositories.block_repository import BlockRepository
@@ -140,3 +140,24 @@ def update_reservation_endpoint(
         )
 
     return {"message": "Reservation updated"}
+@app.delete("/api/reservations/{reservation_id}", status_code=204)
+def cancel_reservation_endpoint(
+    reservation_id: int,
+    db_connection=Depends(get_db_connection),
+):
+    try:
+        cancel_reservation(
+            connection=db_connection,
+            reservation_id=reservation_id,
+        )
+    except ValueError as exc:
+        if str(exc) == "Reservation not found":
+            raise HTTPException(
+                status_code=404,
+                detail=str(exc),
+            )
+
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        )

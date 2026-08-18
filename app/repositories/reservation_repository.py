@@ -105,6 +105,9 @@ class ReservationRepository:
                     reservation_id,
                 ),
             )
+            if cursor.rowcount == 0:
+                raise ValueError("Reservation not found")
+        
 
     def expire_pending_reservations(
         self,

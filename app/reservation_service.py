@@ -130,3 +130,23 @@ def update_reservation(
         check_out=check_out,
         guests_count=guests_count,
     )
+def cancel_reservation(
+    connection: Connection,
+    reservation_id: int,
+) -> None:
+    repository = ReservationRepository(connection)
+
+    reservation = repository.get_by_id_for_update(
+        reservation_id
+    )
+
+    if reservation is None:
+        raise ValueError("Reservation not found")
+
+    if reservation["status"] == "CANCELLED":
+        raise ValueError("Reservation is already cancelled")
+
+    repository.update_status(
+        reservation_id=reservation_id,
+        status="CANCELLED",
+    )
