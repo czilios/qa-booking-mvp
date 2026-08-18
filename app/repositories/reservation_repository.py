@@ -87,29 +87,6 @@ class ReservationRepository:
 
             return cursor.fetchone()
 
-    def get_deposit_for_update(self, reservation_id: int):
-        with self.connection.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT
-                    id,
-                    reservation_id,
-                    type,
-                    amount,
-                    status,
-                    due_at,
-                    paid_at
-                FROM payments
-                WHERE reservation_id = %s
-                  AND type = 'DEPOSIT'
-                ORDER BY id
-                LIMIT 1
-                FOR UPDATE
-                """,
-                (reservation_id,),
-            )
-
-            return cursor.fetchone()
 
     def update_status(
         self,
