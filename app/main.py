@@ -1,6 +1,6 @@
 from datetime import date
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 
 from app.availability_service import AvailabilityService
 from app.database import get_connection
@@ -42,6 +42,12 @@ def check_availability(
     check_out: date,
     availability_service=Depends(get_availability_service),
 ):
+    if check_out <= check_in:
+        raise HTTPException(
+            status_code=400,
+            detail="check_out must be after check_in",
+        )
+
     available_cottages = availability_service.get_available_cottages(
         check_in=check_in,
         check_out=check_out,
