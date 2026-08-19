@@ -5,13 +5,14 @@ from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from app.reservation_service import create_reservation, update_reservation
-from app.payment_service import create_payment
+from app.payment_service import create_payment, mark_payment_as_paid, generate_payment_report
 from app.reservation_service import cancel_reservation
 from app.availability_service import AvailabilityService
 
 from app.repositories.block_repository import BlockRepository
 from app.repositories.cottage_repository import CottageRepository
 from app.repositories.reservation_repository import ReservationRepository
+from app.repositories.payment_repository import PaymentRepository
 
 from app.database import get_connection
 
@@ -37,6 +38,9 @@ class PaymentCreate(BaseModel):
     payment_type: str
     amount: Decimal
     due_at: datetime | None = None
+
+class PaymentPaid(BaseModel):
+    paid_at: datetime
     
 
 def get_db_connection():
@@ -199,3 +203,68 @@ def create_payment_endpoint(
             status_code=409,
             detail=str(exc),
         )
+
+@app.get("/api/payments/report")
+def get_payment_report_endpoint(
+    start_date: date,
+    end_date: date,
+    vat_rate: Decimal = Decimal("8"),
+    source_code: str | None = None,
+    db_connection=Depends(get_db_connection),
+):
+    if end_date <= start_date:
+        raise HTTPException(
+            status_code=400,
+            detail="end_date must be after start_date",
+        )
+
+    return generate_payment_report(
+        connection=db_connection,
+        start_date=start_date,
+        end_date=end_date,
+        vat_rate=vat_rate,
+        source_code=source_code,
+    )
+
+@app.get("/api/payments/{payment_id}")
+def get_payment_endpoint(
+    payment_id: int,
+    db_connection=Depends(get_db_connection),
+):
+    repository = PaymentRepository(db_connection)
+
+    payment = repository.get_payment_by_id(payment_id)
+
+    if payment is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Payment not found",
+        )
+
+    return payment
+
+@app.put("/api/payments/{payment_id}/paid")
+def mark_payment_as_paid_endpoint(
+    payment_id: int,
+    payment: PaymentPaid,
+    db_connection=Depends(get_db_connection),
+):
+    try:
+        mark_payment_as_paid(
+            connection=db_connection,
+            payment_id=payment_id,
+            paid_at=payment.paid_at,
+        )
+    except ValueError as exc:
+        if str(exc) == "Payment not found":
+            raise HTTPException(
+                status_code=404,
+                detail=str(exc),
+            )
+
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        )
+
+    return {"message": "Payment marked as paid"}

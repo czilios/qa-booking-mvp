@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 from decimal import Decimal
 
 from pymysql.connections import Connection
@@ -59,3 +59,60 @@ def create_payment(
         amount=amount,
         due_at=due_at,
     )
+
+def generate_payment_report(
+    connection: Connection,
+    start_date: date,
+    end_date: date,
+    vat_rate: Decimal,
+    source_code: str | None = None,
+):
+    payment_repository = PaymentRepository(connection)
+
+    payments = payment_repository.get_paid_payments_between(
+        start_date=start_date,
+        end_date=end_date,
+        source_code=source_code,
+    )
+
+    vat_rate = Decimal(str(vat_rate))
+
+    report_rows = []
+
+    for payment in payments:
+        gross = Decimal(payment["amount"])
+
+        if vat_rate == 0:
+            net = gross
+            vat = Decimal("0.00")
+        else:
+            net = (
+                gross
+                / (Decimal("1") + vat_rate / Decimal("100"))
+            ).quantize(
+                Decimal("0.01")
+            )
+
+            vat = (gross - net).quantize(
+                Decimal("0.01")
+            )
+
+        report_rows.append(
+            {
+                "payment_id": payment["payment_id"],
+                "reservation_id": payment["reservation_id"],
+                "payment_type": payment["payment_type"],
+                "gross_amount": gross,
+                "net_amount": net,
+                "vat_amount": vat,
+                "vat_rate": vat_rate,
+                "paid_at": payment["paid_at"],
+                "cottage_id": payment["cottage_id"],
+                "check_in": payment["check_in"],
+                "check_out": payment["check_out"],
+                "source_code": payment["source_code"],
+                "source_name": payment["source_name"],
+            }
+        )
+
+    return report_rows
