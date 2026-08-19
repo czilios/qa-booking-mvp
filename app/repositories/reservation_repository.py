@@ -14,6 +14,7 @@ class ReservationRepository:
         check_in: date,
         check_out: date,
         guests_count: int,
+        customer_id: int | None = None,
         status: str = "PENDING",
         expires_at: datetime | None = None,
     ) -> int:
@@ -22,6 +23,7 @@ class ReservationRepository:
                 """
                 INSERT INTO reservations (
                     cottage_id,
+                    customer_id,
                     source_id,
                     check_in,
                     check_out,
@@ -29,10 +31,11 @@ class ReservationRepository:
                     status,
                     expires_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     cottage_id,
+                    customer_id,
                     source_id,
                     check_in,
                     check_out,
@@ -51,6 +54,7 @@ class ReservationRepository:
                 SELECT
                     id,
                     cottage_id,
+                    customer_id,
                     source_id,
                     check_in,
                     check_out,
@@ -72,6 +76,7 @@ class ReservationRepository:
                 SELECT
                     id,
                     cottage_id,
+                    customer_id,
                     source_id,
                     check_in,
                     check_out,
@@ -86,7 +91,6 @@ class ReservationRepository:
             )
 
             return cursor.fetchone()
-
 
     def update_status(
         self,
@@ -105,9 +109,9 @@ class ReservationRepository:
                     reservation_id,
                 ),
             )
+
             if cursor.rowcount == 0:
                 raise ValueError("Reservation not found")
-        
 
     def expire_pending_reservations(
         self,
@@ -126,53 +130,55 @@ class ReservationRepository:
             )
 
             return cursor.rowcount
+
     def get_active_reservations(self):
         with self.connection.cursor() as cursor:
             cursor.execute(
-            """
-            SELECT
-                id,
-                cottage_id,
-                check_in,
-                check_out,
-                status
-            FROM reservations
-            WHERE status IN ('PENDING', 'CONFIRMED')
-            """
-        )
+                """
+                SELECT
+                    id,
+                    cottage_id,
+                    customer_id,
+                    check_in,
+                    check_out,
+                    status
+                FROM reservations
+                WHERE status IN ('PENDING', 'CONFIRMED')
+                """
+            )
 
-        return cursor.fetchall()
+            return cursor.fetchall()
+
     def update(
-    self,
-    reservation_id: int,
-    cottage_id: int,
-    source_id: int,
-    check_in: date,
-    check_out: date,
-    guests_count: int,
-) -> None:
+        self,
+        reservation_id: int,
+        cottage_id: int,
+        source_id: int,
+        check_in: date,
+        check_out: date,
+        guests_count: int,
+    ) -> None:
         with self.connection.cursor() as cursor:
             cursor.execute(
-            """
-            UPDATE reservations
-            SET
-                cottage_id = %s,
-                source_id = %s,
-                check_in = %s,
-                check_out = %s,
-                guests_count = %s
-            WHERE id = %s
-            """,
-            (
-                cottage_id,
-                source_id,
-                check_in,
-                check_out,
-                guests_count,
-                reservation_id,
-            ),
-        )
+                """
+                UPDATE reservations
+                SET
+                    cottage_id = %s,
+                    source_id = %s,
+                    check_in = %s,
+                    check_out = %s,
+                    guests_count = %s
+                WHERE id = %s
+                """,
+                (
+                    cottage_id,
+                    source_id,
+                    check_in,
+                    check_out,
+                    guests_count,
+                    reservation_id,
+                ),
+            )
 
-        if cursor.rowcount == 0:
-            raise ValueError("Reservation not found")
-    
+            if cursor.rowcount == 0:
+                raise ValueError("Reservation not found")

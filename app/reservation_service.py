@@ -54,6 +54,7 @@ def create_reservation(
     check_in: datetime,
     check_out: datetime,
     guests_count: int,
+    customer_id: int | None = None,
 ) -> int:
     reservation_repository = ReservationRepository(connection)
 
@@ -86,6 +87,7 @@ def create_reservation(
         check_in=check_in,
         check_out=check_out,
         guests_count=guests_count,
+        customer_id=customer_id,
     )
 def update_reservation(
     connection: Connection,

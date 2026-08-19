@@ -29,6 +29,7 @@ class CustomerCreate(BaseModel):
     email: str | None = None
 
 class ReservationCreate(BaseModel):
+    customer_id: int | None = None
     cottage_id: int
     source_id: int
     check_in: date
@@ -112,6 +113,7 @@ def create_reservation_endpoint(
     try:
         return create_reservation(
             connection=db_connection,
+            customer_id=reservation.customer_id,
             cottage_id=reservation.cottage_id,
             source_id=reservation.source_id,
             check_in=reservation.check_in,
@@ -165,6 +167,24 @@ def update_reservation_endpoint(
         )
 
     return {"message": "Reservation updated"}
+
+@app.get("/api/reservations/{reservation_id}")
+def get_reservation_endpoint(
+    reservation_id: int,
+    db_connection=Depends(get_db_connection),
+):
+    repository = ReservationRepository(db_connection)
+
+    reservation = repository.get_by_id(reservation_id)
+
+    if reservation is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Reservation not found",
+        )
+
+    return reservation
+
 
 @app.delete("/api/reservations/{reservation_id}", status_code=204)
 def cancel_reservation_endpoint(
