@@ -1,14 +1,20 @@
-from datetime import date
+from datetime import date, datetime
+from decimal import Decimal
 
 from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel, Field
+
+from app.reservation_service import create_reservation, update_reservation
+from app.payment_service import create_payment
 from app.reservation_service import cancel_reservation
 from app.availability_service import AvailabilityService
-from app.database import get_connection
+
 from app.repositories.block_repository import BlockRepository
 from app.repositories.cottage_repository import CottageRepository
 from app.repositories.reservation_repository import ReservationRepository
-from app.reservation_service import create_reservation, update_reservation
+
+from app.database import get_connection
+
 
 
 app = FastAPI()
@@ -26,6 +32,12 @@ class ReservationUpdate(BaseModel):
     check_out: date
     guests_count: int = Field(gt=0)
 
+class PaymentCreate(BaseModel):
+    reservation_id: int
+    payment_type: str
+    amount: Decimal
+    due_at: datetime | None = None
+    
 
 def get_db_connection():
     connection = get_connection()
@@ -140,6 +152,7 @@ def update_reservation_endpoint(
         )
 
     return {"message": "Reservation updated"}
+
 @app.delete("/api/reservations/{reservation_id}", status_code=204)
 def cancel_reservation_endpoint(
     reservation_id: int,
@@ -149,6 +162,31 @@ def cancel_reservation_endpoint(
         cancel_reservation(
             connection=db_connection,
             reservation_id=reservation_id,
+        )
+    except ValueError as exc:
+        if str(exc) == "Reservation not found":
+            raise HTTPException(
+                status_code=404,
+                detail=str(exc),
+            )
+
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        )
+
+@app.post("/api/payments", status_code=201)
+def create_payment_endpoint(
+    payment: PaymentCreate,
+    db_connection=Depends(get_db_connection),
+):
+    try:
+        return create_payment(
+            connection=db_connection,
+            reservation_id=payment.reservation_id,
+            payment_type=payment.payment_type,
+            amount=payment.amount,
+            due_at=payment.due_at,
         )
     except ValueError as exc:
         if str(exc) == "Reservation not found":
