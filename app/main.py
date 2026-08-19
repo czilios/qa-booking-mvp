@@ -7,18 +7,27 @@ from pydantic import BaseModel, Field
 from app.reservation_service import create_reservation, update_reservation
 from app.payment_service import create_payment, mark_payment_as_paid, generate_payment_report
 from app.reservation_service import cancel_reservation
+from app.customer_service import create_customer, get_customer, update_customer
 from app.availability_service import AvailabilityService
 
 from app.repositories.block_repository import BlockRepository
 from app.repositories.cottage_repository import CottageRepository
 from app.repositories.reservation_repository import ReservationRepository
 from app.repositories.payment_repository import PaymentRepository
+from app.repositories.customer_repository import CustomerRepository
 
 from app.database import get_connection
 
 
 
 app = FastAPI()
+
+class CustomerCreate(BaseModel):
+    first_name: str
+    last_name: str
+    phone: str
+    email: str | None = None
+
 class ReservationCreate(BaseModel):
     cottage_id: int
     source_id: int
@@ -268,3 +277,74 @@ def mark_payment_as_paid_endpoint(
         )
 
     return {"message": "Payment marked as paid"}
+
+@app.post("/api/customers", status_code=201)
+def create_customer_endpoint(
+    customer: CustomerCreate,
+    db_connection=Depends(get_db_connection),
+):
+    try:
+        customer_id = create_customer(
+            connection=db_connection,
+            first_name=customer.first_name,
+            last_name=customer.last_name,
+            phone=customer.phone,
+            email=customer.email,
+        )
+
+        repository = CustomerRepository(db_connection)
+
+        return repository.get_by_id(customer_id)
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        )
+@app.get("/api/customers/{customer_id}")
+def get_customer_endpoint(
+    customer_id: int,
+    db_connection=Depends(get_db_connection),
+):
+    try:
+        return get_customer(
+            connection=db_connection,
+            customer_id=customer_id,
+        )
+    except ValueError as exc:
+        if str(exc) == "Customer not found":
+            raise HTTPException(
+                status_code=404,
+                detail=str(exc),
+            )
+
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        )
+@app.put("/api/customers/{customer_id}")
+def update_customer_endpoint(
+    customer_id: int,
+    customer: CustomerCreate,
+    db_connection=Depends(get_db_connection),
+):
+    try:
+        return update_customer(
+            connection=db_connection,
+            customer_id=customer_id,
+            first_name=customer.first_name,
+            last_name=customer.last_name,
+            phone=customer.phone,
+            email=customer.email,
+        )
+    except ValueError as exc:
+        if str(exc) == "Customer not found":
+            raise HTTPException(
+                status_code=404,
+                detail=str(exc),
+            )
+
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        )
