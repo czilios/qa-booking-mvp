@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Wrzosowo 159 - Dostępność</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', path='styles.css') }}"
+    >
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>Wrzosowo 159</h1>
+
+        <h2>Dostępność</h2>
+
+        <form method="get" action="/ui">
+
+            <div class="form-group">
+
+                <label for="check_in">Od:</label>
+
+                <input
+                    type="date"
+                    id="check_in"
+                    name="check_in"
+                    value="{{ check_in or '' }}"
+                    required
+                >
+
+            </div>
+
+            <div class="form-group">
+
+                <label for="check_out">Do:</label>
+
+                <input
+                    type="date"
+                    id="check_out"
+                    name="check_out"
+                    value="{{ check_out or '' }}"
+                    required
+                >
+
+            </div>
+
+            <button type="submit">
+                Sprawdź dostępność
+            </button>
+
+        </form>
+
+        {% if available_cottages is not none %}
+        {% if selected_cottage_id is not none %}
+
+    <div class="reservation-card">
+
+        <div class="reservation-header">
+            <h2>Nowa rezerwacja</h2>
+            <span class="selected-cottage">
+                Domek {{ selected_cottage_id }}
+            </span>
+        </div>
+
+        <div class="reservation-dates">
+            <div>
+                <span class="label">Przyjazd</span>
+                <strong>{{ check_in }}</strong>
+            </div>
+
+            <div>
+                <span class="label">Wyjazd</span>
+                <strong>{{ check_out }}</strong>
+            </div>
+        </div>
+
+        <form method="post" action="/ui/reservations">
+
+            <input
+                type="hidden"
+                name="cottage_id"
+                value="{{ selected_cottage_id }}"
+            >
+
+            <input
+                type="hidden"
+                name="check_in"
+                value="{{ check_in }}"
+            >
+
+            <input
+                type="hidden"
+                name="check_out"
+                value="{{ check_out }}"
+            >
+
+            <div class="form-group">
+
+                <label for="phone">
+                    Numer telefonu
+                </label>
+
+                <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    placeholder="+48 600 000 000"
+                    required
+                >
+
+            </div>
+
+            <div class="form-group">
+
+                <label for="guests_count">
+                    Liczba gości
+                </label>
+
+                <select
+                     id="guests_count"
+                     name="guests_count"
+                     required
+                >
+                    <option value="1">1 osoba</option>
+                    <option value="2" selected>2 osoby</option>
+                    <option value="3">3 osoby</option>
+                    <option value="4">4 osoby</option>
+                </select>
+
+            </div>
+
+            <button
+                type="submit"
+                class="primary-button"
+            >
+                Utwórz rezerwację
+            </button>
+
+        </form>
+
+    </div>
+
+{% endif %}
+
+    <div class="results">
+
+        <h2>Dostępne domki</h2>
+
+        {% if available_cottages %}
+
+            {% for cottage_id in available_cottages %}
+
+                <div class="cottage">
+
+                    <span class="cottage-name">
+                        Domek {{ cottage_id }}
+                    </span>
+
+                    <a
+                        class="select-cottage"
+                        href="/ui?check_in={{ check_in }}&check_out={{ check_out }}&cottage_id={{ cottage_id }}"
+                    >
+                        WYBIERZ
+                    </a>
+
+                </div>
+
+            {% endfor %}
+
+        {% else %}
+
+            <div class="no-availability">
+                <strong>Brak wolnych domków</strong>
+                <p>Wybierz inny termin.</p>
+            </div>
+
+        {% endif %}
+
+    </div>
+
+{% endif %}
+
+    </div>
+
+</body>
+
+</html>

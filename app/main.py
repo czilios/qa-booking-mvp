@@ -1,7 +1,10 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request, Form
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
 from app.reservation_service import create_reservation, update_reservation
@@ -21,6 +24,14 @@ from app.database import get_connection
 
 
 app = FastAPI()
+
+app.mount(
+    "/static",
+    StaticFiles(directory="app/static"),
+    name="static",
+)
+
+templates = Jinja2Templates(directory="app/templates")
 
 class CustomerCreate(BaseModel):
     phone: str
@@ -368,3 +379,99 @@ def update_customer_endpoint(
             status_code=400,
             detail=str(exc),
         )
+    
+@app.get("/ui")
+def operator_ui(
+    request: Request,
+    check_in: date | None = None,
+    check_out: date | None = None,
+    cottage_id: int | None = None,
+):
+    connection = get_connection()
+
+    try:
+        cottage_repository = CottageRepository(connection)
+
+        cottage_ids = cottage_repository.get_active_cottage_ids()
+
+        available_cottages = None
+
+        if check_in is not None and check_out is not None:
+            if check_out <= check_in:
+                raise HTTPException(
+                    status_code=400,
+                    detail="check_out must be after check_in",
+                )
+
+            availability_service = AvailabilityService(
+                reservation_repository=ReservationRepository(connection),
+                block_repository=BlockRepository(connection),
+                cottage_repository=cottage_repository,
+            )
+
+            available_cottages = availability_service.get_available_cottages(
+                check_in=check_in,
+                check_out=check_out,
+            )
+
+    finally:
+        connection.close()
+
+    return templates.TemplateResponse(
+    request=request,
+    name="availability.html",
+    context={
+        "request": request,
+        "check_in": check_in.isoformat() if check_in else "",
+        "check_out": check_out.isoformat() if check_out else "",
+        "cottage_ids": cottage_ids,
+        "available_cottages": available_cottages,
+        "selected_cottage_id": cottage_id,
+    },
+)
+
+@app.post("/ui/reservations")
+def create_ui_reservation(
+    cottage_id: int = Form(...),
+    check_in: date = Form(...),
+    check_out: date = Form(...),
+    phone: str = Form(...),
+    guests_count: int = Form(...),
+    db_connection=Depends(get_db_connection),
+):
+    try:
+        customer_repository = CustomerRepository(db_connection)
+
+        # Na tym etapie szukamy klienta po numerze telefonu.
+        customer = customer_repository.get_by_phone(phone)
+
+        if customer is None:
+            customer_id = create_customer(
+                connection=db_connection,
+                phone=phone,
+            )
+        else:
+            customer_id = customer["id"]
+
+        reservation_id = create_reservation(
+            connection=db_connection,
+            customer_id=customer_id,
+            cottage_id=cottage_id,
+            source_id=1, #direct booking
+            check_in=check_in,
+            check_out=check_out,
+            guests_count=guests_count,
+        )
+        db_connection.commit()
+
+    except ValueError as exc:
+        db_connection.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        )
+
+    return RedirectResponse(
+        url=f"/ui?check_in={check_in}&check_out={check_out}",
+        status_code=303,
+    )

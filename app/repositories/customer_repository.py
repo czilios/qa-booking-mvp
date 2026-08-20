@@ -56,6 +56,26 @@ class CustomerRepository:
             )
 
             return cursor.fetchone()
+
+    def get_by_phone(self, phone: str):
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+            """
+            SELECT
+                id,
+                first_name,
+                last_name,
+                phone,
+                email
+            FROM customers
+            WHERE phone = %s
+            LIMIT 1
+            """,
+            (phone,),
+        )
+
+        return cursor.fetchone()
+        
     def update(
     self,
     customer_id: int,

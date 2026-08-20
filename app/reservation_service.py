@@ -89,6 +89,7 @@ def create_reservation(
         guests_count=guests_count,
         customer_id=customer_id,
     )
+
 def update_reservation(
     connection: Connection,
     reservation_id: int,
