@@ -23,9 +23,9 @@ from app.database import get_connection
 app = FastAPI()
 
 class CustomerCreate(BaseModel):
-    first_name: str
-    last_name: str
     phone: str
+    first_name: str | None = None
+    last_name: str | None = None
     email: str | None = None
 
 class ReservationCreate(BaseModel):

@@ -9,16 +9,11 @@ def normalize_phone(phone: str) -> str:
 
 def create_customer(
     connection: Connection,
-    first_name: str,
-    last_name: str,
     phone: str,
+    first_name: str |None = None,
+    last_name: str | None = None,
     email: str | None = None,
 ) -> int:
-    if not first_name.strip():
-        raise ValueError("First name is required")
-
-    if not last_name.strip():
-        raise ValueError("Last name is required")
 
     if not phone.strip():
         raise ValueError("Phone is required")
@@ -49,16 +44,12 @@ def get_customer(
 def update_customer(
     connection: Connection,
     customer_id: int,
-    first_name: str,
-    last_name: str,
     phone: str,
+    first_name: str | None = None,
+    last_name: str | None = None,
     email: str | None = None,
 ):
-    if not first_name.strip():
-        raise ValueError("First name is required")
 
-    if not last_name.strip():
-        raise ValueError("Last name is required")
 
     if not phone.strip():
         raise ValueError("Phone is required")
