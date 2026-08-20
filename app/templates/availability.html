@@ -45,7 +45,7 @@
 
                 <label for="check_out">Do:</label>
 
-                <input
+               <input
                     type="date"
                     id="check_out"
                     name="check_out"
@@ -192,6 +192,26 @@
 {% endif %}
 
     </div>
+    <script>
+    const checkIn = document.getElementById("check_in");
+    const checkOut = document.getElementById("check_out");
+
+    function updateCheckoutMin() {
+        if (checkIn.value) {
+            checkOut.min = checkIn.value;
+
+            if (checkOut.value && checkOut.value <= checkIn.value) {
+                checkOut.value = "";
+            }
+        } else {
+            checkOut.removeAttribute("min");
+        }
+    }
+
+    checkIn.addEventListener("change", updateCheckoutMin);
+
+    updateCheckoutMin();
+</script>
 
 </body>
 
