@@ -3,8 +3,8 @@ from datetime import date
 from app.repositories.customer_repository import CustomerRepository
 from app.repositories.reservation_repository import ReservationRepository
 
-from app.main import app, get_db_connection
-
+from app.main import app
+from app.database import get_connection
 
 def test_create_reservation_returns_201(api_client):
     response = api_client.post(
@@ -114,8 +114,8 @@ def test_create_reservation_with_customer_returns_201(
             "customer_id": customer_id,
             "cottage_id": 1,
             "source_id": 1,
-            "check_in": "2028-06-10",
-            "check_out": "2028-06-17",
+            "check_in": "2031-09-10",
+            "check_out": "2031-09-17",
             "guests_count": 2,
         },
     )
@@ -182,8 +182,8 @@ def test_get_reservation_returns_200(
         cottage_id=1,
         customer_id=customer_id,
         source_id=1,
-        check_in=date(2028, 7, 10),
-        check_out=date(2028, 7, 17),
+        check_in=date(2030, 7, 10),
+        check_out=date(2030, 7, 17),
         guests_count=2,
     )
 
@@ -199,6 +199,135 @@ def test_get_reservation_returns_200(
     assert data["customer_id"] == customer_id
     assert data["cottage_id"] == 1
     assert data["source_id"] == 1
-    assert data["check_in"] == "2028-07-10"
-    assert data["check_out"] == "2028-07-17"
+    assert data["check_in"] == "2030-07-10"
+    assert data["check_out"] == "2030-07-17"
     assert data["guests_count"] == 2
+
+def test_create_ui_reservation_returns_303(
+    api_client,
+    created_reservation_cleanup,
+):
+    phone = "+48600111222"
+
+    response = api_client.post(
+        "/ui/reservations",
+        data={
+            "cottage_id": 1,
+            "check_in": "2029-06-10",
+            "check_out": "2029-06-17",
+            "phone": phone,
+            "guests_count": 2,
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+
+    connection = get_connection()
+
+    try:
+        customer_repository = CustomerRepository(connection)
+
+        customer = customer_repository.get_by_phone(phone)
+
+        assert customer is not None
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id
+                FROM reservations
+                WHERE customer_id = %s
+                  AND cottage_id = %s
+                  AND check_in = %s
+                  AND check_out = %s
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (
+                    customer["id"],
+                    1,
+                    "2029-06-10",
+                    "2029-06-17",
+                ),
+            )
+
+            reservation = cursor.fetchone()
+
+        assert reservation is not None
+
+        created_reservation_cleanup["reservation_ids"].append(
+            reservation["id"]
+        )
+        created_reservation_cleanup["customer_ids"].append(
+            customer["id"]
+        )
+
+    finally:
+        connection.close()
+
+def test_create_ui_reservation_persists_data(
+    api_client,
+    created_reservation_cleanup,
+):
+    phone = "+48600111223"
+
+    response = api_client.post(
+        "/ui/reservations",
+        data={
+            "cottage_id": 1,
+            "check_in": "2029-06-10",
+            "check_out": "2029-06-17",
+            "phone": phone,
+            "guests_count": 2,
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+
+    connection = get_connection()
+
+    try:
+        customer_repository = CustomerRepository(connection)
+
+        customer = customer_repository.get_by_phone(phone)
+
+        assert customer is not None
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT *
+                FROM reservations
+                WHERE cottage_id = %s
+                  AND customer_id = %s
+                  AND check_in = %s
+                  AND check_out = %s
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (
+                    1,
+                    customer["id"],
+                    "2029-06-10",
+                    "2029-06-17",
+                ),
+            )
+
+            reservation = cursor.fetchone()
+
+        assert reservation is not None
+        assert reservation["customer_id"] == customer["id"]
+        assert reservation["source_id"] == 1
+        assert reservation["status"] == "PENDING"
+
+        created_reservation_cleanup["reservation_ids"].append(
+            reservation["id"]
+        )
+        created_reservation_cleanup["customer_ids"].append(
+            customer["id"]
+        )
+
+    finally:
+        connection.close()
