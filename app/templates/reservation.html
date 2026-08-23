@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Rezerwacja #{{ reservation.id }} - Wrzosowo 159</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', path='styles.css') }}"
+    >
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Wrzosowo 159</h1>
+
+    <div class="reservation-card">
+
+        <div class="reservation-header">
+            <h2>Rezerwacja #{{ reservation.id }}</h2>
+
+            <span class="selected-cottage">
+                Domek {{ reservation.cottage_id }}
+            </span>
+        </div>
+
+        <div class="reservation-dates">
+
+            <div>
+                <span class="label">Przyjazd</span>
+                <strong>{{ reservation.check_in }}</strong>
+            </div>
+
+            <div>
+                <span class="label">Wyjazd</span>
+                <strong>{{ reservation.check_out }}</strong>
+            </div>
+
+        </div>
+
+        <div class="reservation-details">
+
+            <p>
+                <strong>Status:</strong>
+                {{ reservation.status }}
+            </p>
+
+            <p>
+                <strong>Liczba gości:</strong>
+                {{ reservation.guests_count }}
+            </p>
+
+            <p>
+                <strong>Źródło:</strong>
+                {{ reservation.source_id }}
+            </p>
+
+            <p>
+                <strong>Klient ID:</strong>
+                {{ reservation.customer_id or "Brak" }}
+            </p>
+
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+
+</html>

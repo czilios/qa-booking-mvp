@@ -343,3 +343,60 @@ def test_ui_displays_created_reservation_id(api_client):
 
     assert response.status_code == 200
     assert "Rezerwacja #1234" in response.text
+
+def test_get_reservation_returns_404_for_nonexistent_reservation(
+    api_client,
+):
+    response = api_client.get(
+        "/api/reservations/999999999"
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Reservation not found"
+
+def test_get_reservation_ui_returns_200(
+    api_client,
+    db_connection,
+):
+    reservation_repository = ReservationRepository(db_connection)
+
+    reservation_id = reservation_repository.create(
+        cottage_id=1,
+        source_id=1,
+        check_in=date(2031, 7, 10),
+        check_out=date(2031, 7, 17),
+        guests_count=2,
+    )
+
+    db_connection.commit()
+
+    reservation = reservation_repository.get_by_id(
+        reservation_id
+    )
+
+
+
+    response = api_client.get(
+        f"/ui/reservations/{reservation_id}"
+    )
+
+
+    assert response.status_code == 200
+    assert f"Rezerwacja #{reservation_id}" in response.text
+    assert "Domek 1" in response.text
+    assert "2031-07-10" in response.text
+    assert "2031-07-17" in response.text
+    assert "2" in response.text
+
+
+def test_get_reservation_ui_returns_404_for_nonexistent_reservation(
+    api_client,
+):
+    
+    response = api_client.get(
+        "/ui/reservations/999999999"
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Reservation not found"
+

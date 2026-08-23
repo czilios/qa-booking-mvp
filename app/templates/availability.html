@@ -60,6 +60,36 @@
             </button>
 
         </form>
+        <div class="reservation-search">
+                <h2>Wyszukaj rezerwację</h2>
+
+                <form
+                    method="get"
+                    action="/ui/reservations/search"
+                >
+                    <div class="form-group">
+
+                        <label for="reservation_id">
+                            Numer rezerwacji
+                        </label>
+
+                        <input
+                            type="number"
+                            id="reservation_id"
+                            name="reservation_id"
+                            min="1"
+                            placeholder="np. 3791"
+                            required
+                        >
+
+                    </div>
+
+                    <button type="submit">
+                        SZUKAJ
+                    </button>
+
+                </form>
+            </div>
         {% if reservation_created %}
             <div class="success-message">
                 ✓ Rezerwacja #{{ reservation_created }} została utworzona

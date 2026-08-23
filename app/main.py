@@ -485,3 +485,40 @@ def create_ui_reservation(
     ),
     status_code=303,
 )
+
+@app.get("/ui/reservations/search")
+def search_reservation_ui(
+    reservation_id: int,
+):
+    return RedirectResponse(
+        url=f"/ui/reservations/{reservation_id}",
+        status_code=303,
+    )
+
+@app.get("/ui/reservations/{reservation_id}")
+def reservation_ui(
+    request: Request,
+    reservation_id: int,
+):
+    connection = get_connection()
+
+    try:
+        repository = ReservationRepository(connection)
+        reservation = repository.get_by_id(reservation_id)
+
+    finally:
+        connection.close()
+
+    if reservation is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Reservation not found",
+        )
+
+    return templates.TemplateResponse(
+        request=request,
+        name="reservation.html",
+        context={
+            "reservation": reservation,
+        },
+    )
