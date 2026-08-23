@@ -386,6 +386,7 @@ def operator_ui(
     check_in: date | None = None,
     check_out: date | None = None,
     cottage_id: int | None = None,
+    reservation_created: int | None = None,
 ):
     connection = get_connection()
 
@@ -427,6 +428,8 @@ def operator_ui(
         "cottage_ids": cottage_ids,
         "available_cottages": available_cottages,
         "selected_cottage_id": cottage_id,
+        "reservation_created": reservation_created,
+        
     },
 )
 
@@ -465,13 +468,18 @@ def create_ui_reservation(
         db_connection.commit()
 
     except ValueError as exc:
-        db_connection.rollback()
+        
         raise HTTPException(
             status_code=409,
             detail=str(exc),
         )
 
     return RedirectResponse(
-        url=f"/ui?check_in={check_in}&check_out={check_out}",
-        status_code=303,
-    )
+    url=(
+        f"/ui?"
+        f"check_in={check_in}"
+        f"&check_out={check_out}"
+        f"&reservation_created={reservation_id}"
+    ),
+    status_code=303,
+)

@@ -153,6 +153,12 @@
 
 {% endif %}
 
+{% if reservation_created %}
+    <div class="success-message">
+        ✓ Rezerwacja #{{ reservation_created }} została utworzona
+    </div>
+{% endif %}
+
     <div class="results">
 
         <h2>Dostępne domki</h2>
