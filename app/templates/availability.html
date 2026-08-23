@@ -60,6 +60,12 @@
             </button>
 
         </form>
+        {% if reservation_created %}
+            <div class="success-message">
+                ✓ Rezerwacja #{{ reservation_created }} została utworzona
+            </div>
+        {% endif %}
+
 
         {% if available_cottages is not none %}
         {% if selected_cottage_id is not none %}
@@ -151,12 +157,6 @@
 
     </div>
 
-{% endif %}
-
-{% if reservation_created %}
-    <div class="success-message">
-        ✓ Rezerwacja #{{ reservation_created }} została utworzona
-    </div>
 {% endif %}
 
     <div class="results">

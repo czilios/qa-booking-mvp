@@ -256,6 +256,10 @@ def test_create_ui_reservation_returns_303(
 
         assert reservation is not None
 
+        assert (f"reservation_created={reservation['id']}"
+                in response.headers["location"]
+                )
+
         created_reservation_cleanup["reservation_ids"].append(
             reservation["id"]
         )
@@ -331,3 +335,11 @@ def test_create_ui_reservation_persists_data(
 
     finally:
         connection.close()
+
+def test_ui_displays_created_reservation_id(api_client):
+    response = api_client.get(
+        "/ui?reservation_created=1234"
+    )
+
+    assert response.status_code == 200
+    assert "Rezerwacja #1234" in response.text
