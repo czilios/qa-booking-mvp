@@ -65,8 +65,24 @@
                 ✓ Rezerwacja #{{ reservation_created }} została utworzona
             </div>
         {% endif %}
+        {% if reservation_error %}
+            <div class="error-message">
 
+                {% if reservation_error == "cottage_unavailable" %}
+                    <strong>Domek jest już zajęty w wybranym terminie.</strong>
+                    <p>Wybierz inny domek lub zmień termin.</p>
 
+                {% elif reservation_error == "too_many_guests" %}
+                    <strong>Zbyt duża liczba osób.</strong>
+                    <p>Wybrany domek może pomieścić maksymalnie 4 osoby.</p>
+
+                {% else %}
+                    <strong>Nie udało się utworzyć rezerwacji.</strong>
+                    <p>Sprawdź dane i spróbuj ponownie.</p>
+                {% endif %}
+
+            </div>
+        {% endif %}
         {% if available_cottages is not none %}
         {% if selected_cottage_id is not none %}
 

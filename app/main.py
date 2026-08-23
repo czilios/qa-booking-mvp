@@ -387,6 +387,7 @@ def operator_ui(
     check_out: date | None = None,
     cottage_id: int | None = None,
     reservation_created: int | None = None,
+    reservation_error: str | None = None,
 ):
     connection = get_connection()
 
@@ -429,6 +430,7 @@ def operator_ui(
         "available_cottages": available_cottages,
         "selected_cottage_id": cottage_id,
         "reservation_created": reservation_created,
+        "reservation_error": reservation_error,
         
     },
 )
