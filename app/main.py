@@ -522,3 +522,30 @@ def reservation_ui(
             "reservation": reservation,
         },
     )
+
+@app.post("/ui/reservations/{reservation_id}/cancel")
+def cancel_reservation_ui(
+    reservation_id: int,
+    db_connection=Depends(get_db_connection),
+):
+    try:
+        cancel_reservation(
+            connection=db_connection,
+            reservation_id=reservation_id,
+        )
+
+        db_connection.commit()
+
+    except ValueError as exc:
+        db_connection.rollback()
+
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        )
+
+    return RedirectResponse(
+        url=f"/ui/reservations/{reservation_id}",
+        status_code=303,
+    )
+

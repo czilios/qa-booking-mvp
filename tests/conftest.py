@@ -16,7 +16,7 @@ def db_connection():
 
 
 @pytest.fixture
-def created_reservation_cleanup():
+def created_reservation_cleanup(db_connection):
     created_reservation_ids = []
     created_customer_ids = []
 
@@ -25,39 +25,32 @@ def created_reservation_cleanup():
         "customer_ids": created_customer_ids,
     }
 
-    connection = get_connection()
+    with db_connection.cursor() as cursor:
 
-    try:
-        with connection.cursor() as cursor:
+        for reservation_id in created_reservation_ids:
+            cursor.execute(
+                """
+                DELETE FROM payments
+                WHERE reservation_id = %s
+                """,
+                (reservation_id,),
+            )
 
-            for reservation_id in created_reservation_ids:
-                cursor.execute(
-                    """
-                    DELETE FROM payments
-                    WHERE reservation_id = %s
-                    """,
-                    (reservation_id,),
-                )
+            cursor.execute(
+                """
+                DELETE FROM reservations
+                WHERE id = %s
+                """,
+                (reservation_id,),
+            )
 
-                cursor.execute(
-                    """
-                    DELETE FROM reservations
-                    WHERE id = %s
-                    """,
-                    (reservation_id,),
-                )
+        for customer_id in created_customer_ids:
+            cursor.execute(
+                """
+                DELETE FROM customers
+                WHERE id = %s
+                """,
+                (customer_id,),
+            )
 
-            for customer_id in created_customer_ids:
-                cursor.execute(
-                    """
-                    DELETE FROM customers
-                    WHERE id = %s
-                    """,
-                    (customer_id,),
-                )
-
-        connection.commit()
-
-    finally:
-        connection.close()
-        
+    db_connection.commit()

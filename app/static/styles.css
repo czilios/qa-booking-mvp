@@ -257,3 +257,7 @@ button {
         padding: 12px;
     }
 }
+
+.cancel-button {
+    margin-top: 20px;
+}

@@ -70,6 +70,21 @@
             </p>
 
         </div>
+        {% if reservation.status != "CANCELLED" %}
+
+            <form
+                method="post"
+                action="/ui/reservations/{{ reservation.id }}/cancel"
+            >
+                <button
+                    type="submit"
+                    class="cancel-button"
+                >
+                    Anuluj rezerwację
+                </button>
+            </form>
+
+        {% endif %}
 
     </div>
 
