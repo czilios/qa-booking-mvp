@@ -61,7 +61,16 @@
 
             <p>
                 <strong>Źródło:</strong>
-                {{ reservation.source_id }}
+
+                {% if reservation.source_id == 1 %}
+                    Direct
+                {% elif reservation.source_id == 2 %}
+                    Booking
+                {% elif reservation.source_id == 4 %}
+                    Belvilla
+                {% else %}
+                    Nieznane
+                {% endif %}
             </p>
 
             <p>
@@ -70,26 +79,32 @@
             </p>
 
         </div>
-        {% if reservation.status != "CANCELLED" %}
 
-            <form
-                method="post"
-                action="/ui/reservations/{{ reservation.id }}/cancel"
-            >
-                <button
-                    type="submit"
-                    class="cancel-button"
-                >
-                    Anuluj rezerwację
-                </button>
-            </form>
+{% if reservation.status != "CANCELLED" %}
+
+    <form
+        method="post"
+        action="/ui/reservations/{{ reservation.id }}/cancel"
+    >
+        <button
+            type="submit"
+            class="cancel-button"
+        >
+            Anuluj rezerwację
+        </button>
+    
 
         {% endif %}
 
-    </div>
+            <a
+                href="/ui/reservations/historical"
+                class="secondary-button"
+            >
+                Utwórz nową rezerwację
+            </a>
+    </form>
 
 </div>
 
 </body>
-
 </html>

@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from decimal import Decimal
+from calendar import monthrange
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Form
 from fastapi.templating import Jinja2Templates
@@ -9,9 +10,11 @@ from pydantic import BaseModel, Field
 
 from app.reservation_service import create_reservation, generate_accounting_report, update_reservation
 from app.payment_service import create_payment, mark_payment_as_paid, generate_payment_report
-from app.reservation_service import cancel_reservation, generate_overall_report
+from app.reservation_service import cancel_reservation, generate_overall_report, create_historical_reservation
 from app.customer_service import create_customer, get_customer, update_customer
 from app.availability_service import AvailabilityService
+from app.overall_report_service import generate_overall_report
+
 
 from app.repositories.block_repository import BlockRepository
 from app.repositories.cottage_repository import CottageRepository
@@ -116,6 +119,50 @@ def check_availability(
         "check_out": check_out,
         "cottages": available_cottages,
     }
+
+@app.get("/ui/reports/overall")
+def overall_report_ui(
+    request: Request,
+    year: int = 2026,
+    month: int = 7,
+    db_connection=Depends(get_db_connection),
+):
+    if month < 1 or month > 12:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid month",
+        )
+
+    start_date = date(year, month, 1)
+
+    if month == 12:
+        end_date = date(year + 1, 1, 1)
+    else:
+        end_date = date(year, month + 1, 1)
+
+    report = generate_overall_report(
+        connection=db_connection,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+    reservations = report["reservations"]
+
+    total_amount = sum(
+        Decimal(str(reservation["total_amount"] or 0))
+        for reservation in reservations
+    )
+
+    return templates.TemplateResponse(
+        request=request,
+        name="overall_report.html",
+        context={
+            "year": year,
+            "month": month,
+            "reservations": reservations,
+            "total_amount": total_amount,
+        },
+    )
 
 @app.post("/api/reservations", status_code=201)
 def create_reservation_endpoint(
@@ -497,6 +544,18 @@ def search_reservation_ui(
         status_code=303,
     )
 
+@app.get("/ui/reservations/historical")
+def historical_reservation_ui(
+    request: Request,
+):
+    return templates.TemplateResponse(
+        request=request,
+        name="historical_reservation.html",
+        context={
+            "request": request,
+        },
+    )
+
 @app.get("/ui/reservations/{reservation_id}")
 def reservation_ui(
     request: Request,
@@ -573,4 +632,87 @@ def get_overall_report(
         connection=db_connection,
         start_date=start_date,
         end_date=end_date,
+    )
+
+@app.get("/ui/reports/overall")
+def overall_report_ui(
+    request: Request,
+    month: int,
+    year: int,
+    db_connection=Depends(get_db_connection),
+):
+    if month == 12:
+        start_date = date(year, 12, 1)
+        end_date = date(year + 1, 1, 1)
+    else:
+        start_date = date(year, month, 1)
+        end_date = date(year, month + 1, 1)
+
+    report = generate_overall_report(
+        connection=db_connection,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+    return templates.TemplateResponse(
+        "overall_report.html",
+        {
+            "request": request,
+            "month": month,
+            "year": year,
+            "reservations": report["reservations"],
+            "total_amount": report["total_amount"],
+        },
+    )
+
+
+@app.post("/ui/reservations/historical")
+def create_historical_ui_reservation(
+    cottage_id: int = Form(...),
+    source_id: int = Form(...),
+    check_in: date = Form(...),
+    check_out: date = Form(...),
+    guests_count: int = Form(...),
+    total_amount: Decimal = Form(...),
+    phone: str | None = Form(None),
+    db_connection=Depends(get_db_connection),
+):
+    customer_id = None
+
+    if phone:
+        customer_repository = CustomerRepository(db_connection)
+
+        customer = customer_repository.get_by_phone(phone)
+
+        if customer is None:
+            customer_id = create_customer(
+                connection=db_connection,
+                phone=phone,
+            )
+        else:
+            customer_id = customer["id"]
+
+    try:
+        reservation_id = create_historical_reservation(
+            connection=db_connection,
+            customer_id=customer_id,
+            cottage_id=cottage_id,
+            source_id=source_id,
+            check_in=check_in,
+            check_out=check_out,
+            guests_count=guests_count,
+            total_amount=total_amount,
+        )
+
+        db_connection.commit()
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        )
+
+    return RedirectResponse(
+        url=f"/ui/reservations/{reservation_id}",
+        status_code=303,
     )

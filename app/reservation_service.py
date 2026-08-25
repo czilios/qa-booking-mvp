@@ -57,6 +57,7 @@ def create_reservation(
     guests_count: int,
     customer_id: int | None = None,
     total_amount: Decimal | None = None,
+    accounting_included: bool = False,
 ) -> int:
     reservation_repository = ReservationRepository(connection)
 
@@ -91,6 +92,7 @@ def create_reservation(
         guests_count=guests_count,
         customer_id=customer_id,
         total_amount=total_amount,
+        accounting_included=accounting_included,
 )
 
 def update_reservation(
@@ -188,3 +190,29 @@ def generate_overall_report(
     return {
         "reservations": reservations,
     }
+
+def create_historical_reservation(
+    connection: Connection,
+    cottage_id: int,
+    source_id: int,
+    check_in: date,
+    check_out: date,
+    guests_count: int,
+    total_amount: Decimal,
+    customer_id: int | None = None,
+) -> int:
+    reservation_repository = ReservationRepository(connection)
+
+    accounting_included = source_id in (1, 2)
+
+    return reservation_repository.create(
+        cottage_id=cottage_id,
+        source_id=source_id,
+        check_in=check_in,
+        check_out=check_out,
+        guests_count=guests_count,
+        customer_id=customer_id,
+        status="CONFIRMED",
+        total_amount=total_amount,
+        accounting_included=accounting_included,
+    )

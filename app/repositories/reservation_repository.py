@@ -67,7 +67,8 @@ class ReservationRepository:
                     guests_count,
                     status,
                     expires_at,
-                    total_amount
+                    total_amount,
+                    accounting_included
                 FROM reservations
                 WHERE id = %s
                 """,
@@ -223,6 +224,7 @@ class ReservationRepository:
             )
 
             return cursor.fetchall()
+        
     def get_all_confirmed_reservations_between(
     self,
     start_date: date,
