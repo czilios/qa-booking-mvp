@@ -156,3 +156,35 @@ def cancel_reservation(
         reservation_id=reservation_id,
         status="CANCELLED",
     )
+
+def generate_accounting_report(
+    connection: Connection,
+    start_date: date,
+    end_date: date,
+):
+    repository = ReservationRepository(connection)
+
+    reservations = repository.get_confirmed_reservations_between(
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+    return {
+        "reservations": reservations,
+    }
+
+def generate_overall_report(
+    connection: Connection,
+    start_date: date,
+    end_date: date,
+):
+    repository = ReservationRepository(connection)
+
+    reservations = repository.get_all_confirmed_reservations_between(
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+    return {
+        "reservations": reservations,
+    }

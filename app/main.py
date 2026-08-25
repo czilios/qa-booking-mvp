@@ -7,9 +7,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
-from app.reservation_service import create_reservation, update_reservation
+from app.reservation_service import create_reservation, generate_accounting_report, update_reservation
 from app.payment_service import create_payment, mark_payment_as_paid, generate_payment_report
-from app.reservation_service import cancel_reservation
+from app.reservation_service import cancel_reservation, generate_overall_report
 from app.customer_service import create_customer, get_customer, update_customer
 from app.availability_service import AvailabilityService
 
@@ -551,3 +551,26 @@ def cancel_reservation_ui(
         status_code=303,
     )
 
+@app.get("/api/accounting-report")
+def get_accounting_report(
+    start_date: date,
+    end_date: date,
+    db_connection=Depends(get_db_connection),
+):
+    return generate_accounting_report(
+        connection=db_connection,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+@app.get("/api/overall-report")
+def get_overall_report(
+    start_date: date,
+    end_date: date,
+    db_connection=Depends(get_db_connection),
+):
+    return generate_overall_report(
+        connection=db_connection,
+        start_date=start_date,
+        end_date=end_date,
+    )

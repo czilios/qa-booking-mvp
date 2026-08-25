@@ -18,6 +18,7 @@ class ReservationRepository:
         status: str = "PENDING",
         expires_at: datetime | None = None,
         total_amount: Decimal | None = None,
+        accounting_included: bool = False,
     ) -> int:
         with self.connection.cursor() as cursor:
             cursor.execute(
@@ -31,9 +32,10 @@ class ReservationRepository:
                     guests_count,
                     status,
                     expires_at,
-                    total_amount
+                    total_amount,
+                    accounting_included
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     cottage_id,
@@ -44,7 +46,8 @@ class ReservationRepository:
                     guests_count,
                     status,
                     expires_at,
-                    total_amount
+                    total_amount,
+                    accounting_included
                 ),
             )
 
@@ -186,3 +189,69 @@ class ReservationRepository:
 
             if cursor.rowcount == 0:
                 raise ValueError("Reservation not found")
+
+    def get_confirmed_reservations_between(
+        self,
+        start_date: date,
+        end_date: date,
+    ):
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    id,
+                    cottage_id,
+                    customer_id,
+                    source_id,
+                    check_in,
+                    check_out,
+                    guests_count,
+                    status,
+                    total_amount,
+                    accounting_included
+                FROM reservations
+                WHERE status = 'CONFIRMED'
+                AND accounting_included = TRUE
+                AND check_out >= %s
+                AND check_out < %s
+                ORDER BY check_out, id
+                """,
+                (
+                    start_date,
+                    end_date,
+                ),
+            )
+
+            return cursor.fetchall()
+    def get_all_confirmed_reservations_between(
+    self,
+    start_date: date,
+    end_date: date,
+    ):
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+            """
+            SELECT
+                id,
+                cottage_id,
+                customer_id,
+                source_id,
+                check_in,
+                check_out,
+                guests_count,
+                status,
+                total_amount,
+                accounting_included
+            FROM reservations
+            WHERE status = 'CONFIRMED'
+              AND check_out >= %s
+              AND check_out < %s
+            ORDER BY check_out, id
+            """,
+            (
+                start_date,
+                end_date,
+            ),
+        )
+
+        return cursor.fetchall()
