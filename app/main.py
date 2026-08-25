@@ -46,6 +46,7 @@ class ReservationCreate(BaseModel):
     check_in: date
     check_out: date
     guests_count: int = Field(gt=0)
+    total_amount: Decimal | None = None
 
 class ReservationUpdate(BaseModel):
     cottage_id: int
@@ -130,6 +131,7 @@ def create_reservation_endpoint(
             check_in=reservation.check_in,
             check_out=reservation.check_out,
             guests_count=reservation.guests_count,
+            total_amount=reservation.total_amount,
         )
     except ValueError as exc:
         if str(exc) == "Reservation not found":

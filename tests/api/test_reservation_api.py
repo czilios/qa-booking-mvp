@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 
 from app.repositories.customer_repository import CustomerRepository
 from app.repositories.reservation_repository import ReservationRepository
@@ -6,7 +7,7 @@ from app.repositories.reservation_repository import ReservationRepository
 from app.main import app
 from app.database import get_connection
 
-def test_create_reservation_returns_201(api_client):
+def test_create_reservation_returns_201(api_client, db_connection):
     response = api_client.post(
         "/api/reservations",
         json={
@@ -15,16 +16,23 @@ def test_create_reservation_returns_201(api_client):
             "check_in": "2027-07-20",
             "check_out": "2027-07-27",
             "guests_count": 2,
+            "total_amount": "2100.00",
         },
     )
     print(response.json())
 
     assert response.status_code == 201
+    reservation_id = response.json()
 
-from datetime import date
+    reservation_repository = ReservationRepository(
+        db_connection
+    )
 
-from app.repositories.reservation_repository import ReservationRepository
+    reservation = reservation_repository.get_by_id(
+        reservation_id
+    )
 
+    assert reservation["total_amount"] == Decimal("2100.00")
 
 def test_create_reservation_rejects_unavailable_cottage(
     db_connection,
@@ -400,3 +408,22 @@ def test_get_reservation_ui_returns_404_for_nonexistent_reservation(
     assert response.status_code == 404
     assert response.json()["detail"] == "Reservation not found"
 
+def test_create_reservation_stores_total_amount(
+    db_connection,
+):
+    repository = ReservationRepository(db_connection)
+
+    reservation_id = repository.create(
+        cottage_id=1,
+        source_id=1,
+        check_in=date(2027, 10, 10),
+        check_out=date(2027, 10, 17),
+        guests_count=2,
+        total_amount=Decimal("2100.00"),
+    )
+
+    db_connection.commit()
+
+    reservation = repository.get_by_id(reservation_id)
+
+    assert reservation["total_amount"] == Decimal("2100.00")

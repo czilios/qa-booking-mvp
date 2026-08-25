@@ -1,4 +1,5 @@
 from datetime import datetime, date
+from decimal import Decimal
 from pymysql.connections import Connection
 from app.repositories.reservation_repository import ReservationRepository
 from app.repositories.payment_repository import PaymentRepository
@@ -55,6 +56,7 @@ def create_reservation(
     check_out: datetime,
     guests_count: int,
     customer_id: int | None = None,
+    total_amount: Decimal | None = None,
 ) -> int:
     reservation_repository = ReservationRepository(connection)
 
@@ -88,7 +90,8 @@ def create_reservation(
         check_out=check_out,
         guests_count=guests_count,
         customer_id=customer_id,
-    )
+        total_amount=total_amount,
+)
 
 def update_reservation(
     connection: Connection,

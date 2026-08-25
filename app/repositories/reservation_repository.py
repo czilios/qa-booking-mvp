@@ -1,5 +1,5 @@
 from datetime import date, datetime
-
+from decimal import Decimal
 from pymysql.connections import Connection
 
 
@@ -17,6 +17,7 @@ class ReservationRepository:
         customer_id: int | None = None,
         status: str = "PENDING",
         expires_at: datetime | None = None,
+        total_amount: Decimal | None = None,
     ) -> int:
         with self.connection.cursor() as cursor:
             cursor.execute(
@@ -29,9 +30,10 @@ class ReservationRepository:
                     check_out,
                     guests_count,
                     status,
-                    expires_at
+                    expires_at,
+                    total_amount
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     cottage_id,
@@ -42,6 +44,7 @@ class ReservationRepository:
                     guests_count,
                     status,
                     expires_at,
+                    total_amount
                 ),
             )
 
@@ -60,7 +63,8 @@ class ReservationRepository:
                     check_out,
                     guests_count,
                     status,
-                    expires_at
+                    expires_at,
+                    total_amount
                 FROM reservations
                 WHERE id = %s
                 """,
