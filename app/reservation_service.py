@@ -201,6 +201,7 @@ def create_historical_reservation(
     total_amount: Decimal,
     customer_id: int | None = None,
     notes: str | None = None,
+    commission_amount: Decimal | None = None,
 ) -> int:
     reservation_repository = ReservationRepository(connection)
 
@@ -217,4 +218,5 @@ def create_historical_reservation(
         total_amount=total_amount,
         accounting_included=accounting_included,
         notes=notes,
+        commission_amount=commission_amount,
     )

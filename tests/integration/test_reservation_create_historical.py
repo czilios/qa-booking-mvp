@@ -12,11 +12,12 @@ def test_create_historical_reservation_creates_confirmed_reservation(
     reservation_id = create_historical_reservation(
         connection=db_connection,
         cottage_id=1,
-        source_id=4,
+        source_id=2,
         check_in=date(2026, 7, 10),
         check_out=date(2026, 7, 17),
         guests_count=2,
-        total_amount=Decimal("2100.00"),
+        total_amount=Decimal("1890.00"),
+        commission_amount=Decimal("253.26"),
         notes="testing",
     )
 
@@ -31,9 +32,10 @@ def test_create_historical_reservation_creates_confirmed_reservation(
     reservation = repository.get_by_id(reservation_id)
 
     assert reservation["status"] == "CONFIRMED"
-    assert reservation["source_id"] == 4
-    assert reservation["accounting_included"] == 0
-    assert Decimal(str(reservation["total_amount"])) == Decimal("2100.00")
+    assert reservation["source_id"] == 2
+    assert reservation["accounting_included"] == 1
+    assert Decimal(str(reservation["total_amount"])) == Decimal("1890.00")
+    assert Decimal(str(reservation["commission_amount"])) == Decimal("253.26")
     assert reservation["notes"] == "testing"
 
 

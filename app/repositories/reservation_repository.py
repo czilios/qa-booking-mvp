@@ -20,6 +20,7 @@ class ReservationRepository:
         total_amount: Decimal | None = None,
         accounting_included: bool = False,
         notes: str | None = None,
+        commission_amount: Decimal | None = None,
     ) -> int:
         with self.connection.cursor() as cursor:
             cursor.execute(
@@ -35,9 +36,10 @@ class ReservationRepository:
                     expires_at,
                     total_amount,
                     accounting_included,
-                    notes
+                    notes,
+                    commission_amount
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     cottage_id,
@@ -50,7 +52,8 @@ class ReservationRepository:
                     expires_at,
                     total_amount,
                     accounting_included,
-                    notes   
+                    notes,
+                    commission_amount
                 ),
             )
 
@@ -72,7 +75,8 @@ class ReservationRepository:
                     expires_at,
                     total_amount,
                     accounting_included,
-                    notes
+                    notes,
+                    commission_amount
                 FROM reservations
                 WHERE id = %s
                 """,
