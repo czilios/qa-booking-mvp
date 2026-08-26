@@ -200,6 +200,7 @@ def create_historical_reservation(
     guests_count: int,
     total_amount: Decimal,
     customer_id: int | None = None,
+    notes: str | None = None,
 ) -> int:
     reservation_repository = ReservationRepository(connection)
 
@@ -215,4 +216,5 @@ def create_historical_reservation(
         status="CONFIRMED",
         total_amount=total_amount,
         accounting_included=accounting_included,
+        notes=notes,
     )

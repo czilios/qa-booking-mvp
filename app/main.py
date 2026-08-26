@@ -675,6 +675,7 @@ def create_historical_ui_reservation(
     guests_count: int = Form(...),
     total_amount: Decimal = Form(...),
     phone: str | None = Form(None),
+    notes: str | None = Form(None),
     db_connection=Depends(get_db_connection),
 ):
     customer_id = None
@@ -702,6 +703,7 @@ def create_historical_ui_reservation(
             check_out=check_out,
             guests_count=guests_count,
             total_amount=total_amount,
+            notes=notes,
         )
 
         db_connection.commit()
