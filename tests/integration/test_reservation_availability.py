@@ -382,22 +382,7 @@ def test_find_available_cottages_returns_only_available_cottages(
             ),
         )
 
-        # Read blocking reservations
-        cursor.execute(
-            """
-            SELECT
-                cottage_id,
-                check_in,
-                check_out,
-                status
-            FROM reservations
-            WHERE status IN ('PENDING', 'CONFIRMED')
-            """
-        )
-
-        reservations = cursor.fetchall()
-
-        # Read blocks
+        # Read only blocks created by this test
         cursor.execute(
             """
             SELECT
@@ -405,10 +390,41 @@ def test_find_available_cottages_returns_only_available_cottages(
                 start_date,
                 end_date
             FROM blocks
-            """
+            WHERE cottage_id = %s
+              AND start_date = %s
+              AND end_date = %s
+            """,
+            (
+                3,
+                date(2026, 8, 20),
+                date(2026, 8, 25),
+            ),
         )
 
         blocks = cursor.fetchall()
+
+    # Test data is defined locally and does not depend
+    # on other reservations stored in the database.
+    reservations = [
+        {
+            "cottage_id": 1,
+            "check_in": date(2026, 8, 20),
+            "check_out": date(2026, 8, 25),
+            "status": "CONFIRMED",
+        },
+        {
+            "cottage_id": 2,
+            "check_in": date(2026, 8, 20),
+            "check_out": date(2026, 8, 25),
+            "status": "PENDING",
+        },
+        {
+            "cottage_id": 5,
+            "check_in": date(2026, 8, 20),
+            "check_out": date(2026, 8, 25),
+            "status": "CONFIRMED",
+        },
+    ]
 
     available_cottages = find_available_cottages(
         cottage_ids=[1, 2, 3, 4, 5, 6],
