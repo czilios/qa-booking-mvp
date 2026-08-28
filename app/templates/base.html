@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        {% block title %}
+            Wrzosowo 159
+        {% endblock %}
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', path='styles.css') }}"
+    >
+</head>
+
+<body>
+
+<nav class="main-nav">
+
+    <div class="nav-brand">
+        <a href="/ui">
+            Wrzosowo 159
+        </a>
+    </div>
+
+    <div class="nav-section">
+
+        <span class="nav-section-title">
+            Rezerwacje
+        </span>
+
+        <a href="/ui">
+            Dostępność
+        </a>
+
+        <a href="/ui/reservations/historical">
+            Dodaj pobyt historyczny
+        </a>
+
+    </div>
+
+    <div class="nav-section">
+
+        <span class="nav-section-title">
+            Finanse
+        </span>
+
+        <a href="/ui/bank-transactions">
+            Dodaj wpływ
+        </a>
+
+    </div>
+
+    <div class="nav-section">
+
+        <span class="nav-section-title">
+            Raporty
+        </span>
+
+        <a href="/ui/reports/overall">
+            Raport ogólny
+        </a>
+
+        <a href="#">
+            Raport księgowy
+        </a>
+
+        <a href="#">
+            Raport sprzedażowy
+        </a>
+
+    </div>
+
+    <div class="nav-section">
+
+        <span class="nav-section-title">
+            Uzgodnienia
+        </span>
+
+        <a href="#">
+            Uzgodnienia
+        </a>
+
+    </div>
+
+</nav>
+
+
+<main>
+
+    {% block content %}
+    {% endblock %}
+
+</main>
+
+
+</body>
+
+</html>

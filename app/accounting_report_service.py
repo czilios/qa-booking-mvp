@@ -1,6 +1,9 @@
 from datetime import datetime
 from decimal import Decimal
 
+from app.repositories.bank_transaction_repository import (
+    BankTransactionRepository,
+)
 
 class AccountingReportService:
     def __init__(self, payment_repository):
@@ -65,4 +68,71 @@ class AccountingReportService:
         "year": year,
         "month": month,
         **report,
+        }
+    
+    def generate_accounting_report(
+    self,
+    bank_transaction_repository,
+    year: int,
+    ):
+        months = []
+
+        carry_over_gross = Decimal("0.00")
+        carry_over_net = Decimal("0.00")
+        carry_over_vat = Decimal("0.00")
+        for month in range(1, 13):
+            if month == 12:
+                start_date = datetime(year, 12, 1)
+                end_date = datetime(year + 1, 1, 1)
+            else:
+                start_date = datetime(year, month, 1)
+                end_date = datetime(year, month + 1, 1)
+            transactions = bank_transaction_repository.list_by_date_range(
+                start_date=start_date.date(),
+                end_date=end_date.date(),
+            )
+
+            monthly_gross = sum(
+            (transaction["amount"] for transaction in transactions),
+            Decimal("0.00"),
+            )
+
+            monthly_net = (
+            monthly_gross / Decimal("1.08")
+            ).quantize(Decimal("0.01"))
+
+            monthly_vat = (
+            monthly_gross - monthly_net
+            ).quantize(Decimal("0.01"))
+
+            total_gross = carry_over_gross + monthly_gross
+            total_net = carry_over_net + monthly_net
+            total_vat = carry_over_vat + monthly_vat
+
+            months.append({
+            "year": year,
+            "month": month,
+
+            "monthly_gross": monthly_gross,
+            "monthly_net": monthly_net,
+            "monthly_vat": monthly_vat,
+
+            "carry_over_gross": carry_over_gross,
+            "carry_over_net": carry_over_net,
+            "carry_over_vat": carry_over_vat,
+            "total_gross": total_gross,
+            "total_net": total_net,
+            "total_vat": total_vat,
+            })
+
+            carry_over_gross = total_gross
+            carry_over_net = total_net
+            carry_over_vat = total_vat
+
+        return {
+            "year": year,
+            "months": months,
+            "total_gross": carry_over_gross,
+            "total_net": carry_over_net,
+            "total_vat": carry_over_vat,
         }

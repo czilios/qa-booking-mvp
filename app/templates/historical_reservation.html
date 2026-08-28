@@ -1,6 +1,10 @@
-</head>
+{% extends "base.html" %}
 
-<body>
+{% block title %}
+    Dodaj pobyt historyczny - Wrzosowo 159
+{% endblock %}
+
+{% block content %}
 
 <div class="container">
 
@@ -8,152 +12,178 @@
 
     <h2>Dodaj pobyt historyczny</h2>
 
-    <form method="post" action="/ui/reservations/historical">
+    <form
+        method="post"
+        action="/ui/reservations/historical"
+    >
 
-    
+        <div class="form-group">
 
-    <div class="form-group">
-        <label for="cottage_id">
-            Domek
-        </label>
+            <label for="cottage_id">
+                Domek
+            </label>
 
-        <select
-            id="cottage_id"
-            name="cottage_id"
-            required
-        >
-            <option value="1">Domek 1</option>
-            <option value="2">Domek 2</option>
-            <option value="3">Domek 3</option>
-            <option value="4">Domek 4</option>
-            <option value="5">Domek 5</option>
-        </select>
-    </div>
+            <select
+                id="cottage_id"
+                name="cottage_id"
+                required
+            >
+                <option value="1">Domek 1</option>
+                <option value="2">Domek 2</option>
+                <option value="3">Domek 3</option>
+                <option value="4">Domek 4</option>
+                <option value="5">Domek 5</option>
+            </select>
 
-    <div class="form-group">
-        <label for="source_id">
-            Źródło
-        </label>
+        </div>
 
-        <select
-            id="source_id"
-            name="source_id"
-            required
-        >
-            <option value="1">Direct</option>
-            <option value="2">Booking</option>
-            <option value="4">Belvilla</option>
-        </select>
-    </div>
 
-    <div class="form-group">
-        <label for="check_in">
-            Przyjazd
-        </label>
+        <div class="form-group">
 
-        <input
-            type="date"
-            id="check_in"
-            name="check_in"
-            required
-        >
-    </div>
+            <label for="source_id">
+                Źródło
+            </label>
 
-    <div class="form-group">
-        <label for="check_out">
-            Wyjazd
-        </label>
+            <select
+                id="source_id"
+                name="source_id"
+                required
+            >
+                <option value="1">Direct</option>
+                <option value="2">Booking</option>
+                <option value="4">Belvilla</option>
+            </select>
 
-        <input
-            type="date"
-            id="check_out"
-            name="check_out"
-            required
-        >
-    </div>
+        </div>
 
-    <div class="form-group">
-        <label for="guests_count">
-            Liczba gości
-        </label>
 
-        <select
-            id="guests_count"
-            name="guests_count"
-            required
-        >
-            <option value="1">1 osoba</option>
-            <option value="2">2 osoby</option>
-            <option value="3">3 osoby</option>
-            <option value="4">4 osoby</option>
-        </select>
-    </div>
+        <div class="form-group">
 
-    <div class="form-group">
-        <label for="total_amount">
-            Kwota
-        </label>
+            <label for="check_in">
+                Przyjazd
+            </label>
 
-        <input
-            type="number"
-            id="total_amount"
-            name="total_amount"
-            min="0"
-            step="0.01"
-            placeholder="2100.00"
-            required
-        >
-    </div>
+            <input
+                type="date"
+                id="check_in"
+                name="check_in"
+                required
+            >
 
-    <div class="form-group">
-        <label for="notes">
-            Notes
-        </label>
+        </div>
 
-        <input
-            type="text"
-            id="notes"
-            name="notes"
-            placeholder="np. Booking ID / Belvilla ID"
-        >
-    </div>
-    <div class="form-group">
-        <label for="commission_amount">
-            Prowizja
-        </label>
 
-        <input
-            type="number"
-            id="commission_amount"
-            name="commission_amount"
-            min="0"
-            step="0.01"
-            placeholder="253.26"
-        >
-    </div>
+        <div class="form-group">
 
-    <div class="form-group">
-        <label for="phone">
-            Numer telefonu
-        </label>
+            <label for="check_out">
+                Wyjazd
+            </label>
 
-        <input
-            type="tel"
-            id="phone"
-            name="phone"
-            placeholder="+48 600 000 000"
-        >
-    </div>
+            <input
+                type="date"
+                id="check_out"
+                name="check_out"
+                required
+            >
 
-    <button type="submit">
-        UTWÓRZ REZERWACJĘ
-    </button>
+        </div>
 
-</form>
+
+        <div class="form-group">
+
+            <label for="guests_count">
+                Liczba gości
+            </label>
+
+            <select
+                id="guests_count"
+                name="guests_count"
+                required
+            >
+                <option value="1">1 osoba</option>
+                <option value="2">2 osoby</option>
+                <option value="3">3 osoby</option>
+                <option value="4">4 osoby</option>
+            </select>
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label for="total_amount">
+                Kwota
+            </label>
+
+            <input
+                type="number"
+                id="total_amount"
+                name="total_amount"
+                min="0"
+                step="0.01"
+                placeholder="2100.00"
+                required
+            >
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label for="notes">
+                Notes
+            </label>
+
+            <input
+                type="text"
+                id="notes"
+                name="notes"
+                placeholder="np. Booking ID / Belvilla ID"
+            >
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label for="commission_amount">
+                Prowizja
+            </label>
+
+            <input
+                type="number"
+                id="commission_amount"
+                name="commission_amount"
+                min="0"
+                step="0.01"
+                placeholder="253.26"
+            >
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label for="phone">
+                Numer telefonu
+            </label>
+
+            <input
+                type="tel"
+                id="phone"
+                name="phone"
+                placeholder="+48 600 000 000"
+            >
+
+        </div>
+
+
+        <button type="submit">
+            UTWÓRZ REZERWACJĘ
+        </button>
+
+    </form>
 
 </div>
 
-</body>
-</html>
-
-
+{% endblock %}

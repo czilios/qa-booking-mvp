@@ -4,6 +4,7 @@ from decimal import Decimal
 from app.accounting_report_service import AccountingReportService
 from app.repositories.payment_repository import PaymentRepository
 from app.repositories.reservation_repository import ReservationRepository
+from app.repositories.bank_transaction_repository import BankTransactionRepository
 
 
 def test_generate_monthly_accounting_report(db_connection):
@@ -300,6 +301,23 @@ def test_generate_payment_report_for_split_payments(db_connection):
     assert report["rows"][1]["payment_type"] == "BALANCE"
     assert report["rows"][0]["paid_at"] == datetime(2027, 11, 15, 10, 0, 0)
     assert report["rows"][1]["paid_at"] == datetime(2028, 11, 1, 15, 30, 0)
+
+def test_generate_accounting_report_for_empty_year(
+    db_connection,
+):
+    payment_repository = PaymentRepository(db_connection)
+    bank_transaction_repository = BankTransactionRepository(db_connection)
+
+    accounting_report_service = AccountingReportService(
+        payment_repository=payment_repository,
+    )
+
+    report = accounting_report_service.generate_accounting_report(
+        bank_transaction_repository=bank_transaction_repository,
+        year=2026,
+    )
+
+    assert len(report["months"]) == 12
 
 
 
