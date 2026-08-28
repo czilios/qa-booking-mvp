@@ -54,3 +54,21 @@ def created_reservation_cleanup(db_connection):
             )
 
     db_connection.commit()
+
+@pytest.fixture
+def created_bank_transaction_cleanup(db_connection):
+    created_bank_transaction_ids = []
+
+    yield created_bank_transaction_ids
+
+    with db_connection.cursor() as cursor:
+        for transaction_id in created_bank_transaction_ids:
+            cursor.execute(
+                """
+                DELETE FROM bank_transactions
+                WHERE id = %s
+                """,
+                (transaction_id,),
+            )
+
+    db_connection.commit()
