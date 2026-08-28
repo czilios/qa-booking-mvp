@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Wpływy - Wrzosowo 159</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', path='styles.css') }}"
+    >
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Wrzosowo 159</h1>
+
+    <h2>Bank Transactions</h2>
+
+    <h2>Dodaj wpływ</h2>
+
+    <form method="post" action="/ui/bank-transactions">
+
+        <div class="form-group">
+
+            <label for="transaction_date">
+                Data wpływu
+            </label>
+
+            <input
+                type="date"
+                id="transaction_date"
+                name="transaction_date"
+                required
+            >
+
+        </div>
+
+        <div class="form-group">
+
+            <label for="source_id">
+                Źródło
+            </label>
+
+            <select
+                id="source_id"
+                name="source_id"
+                required
+            >
+                <option value="1">Direct</option>
+                <option value="2">Booking</option>
+                <option value="4">Belvilla</option>
+            </select>
+
+        </div>
+
+        <div class="form-group">
+
+            <label for="cottage_id">
+                Domek
+            </label>
+
+            <select
+                id="cottage_id"
+                name="cottage_id"
+            >
+                <option value="">Nie przypisano</option>
+                <option value="1">Domek 1</option>
+                <option value="2">Domek 2</option>
+                <option value="3">Domek 3</option>
+                <option value="4">Domek 4</option>
+                <option value="5">Domek 5</option>
+            </select>
+
+        </div>
+
+        <div class="form-group">
+
+            <label for="amount">
+                Kwota
+            </label>
+
+            <input
+                type="number"
+                id="amount"
+                name="amount"
+                min="0.01"
+                step="0.01"
+                required
+            >
+
+        </div>
+
+        <div class="form-group">
+
+            <label for="description">
+                Opis
+            </label>
+
+            <input
+                type="text"
+                id="description"
+                name="description"
+            >
+
+        </div>
+
+        <div class="form-group">
+
+            <label for="notes">
+                Notes
+            </label>
+
+            <input
+                type="text"
+                id="notes"
+                name="notes"
+            >
+
+        </div>
+
+        <button type="submit">
+            ZAPISZ WPŁYW
+        </button>
+
+    </form>
+
+
+    {% if transactions is not none %}
+
+        <div class="report-summary">
+
+            <div class="report-summary-card">
+
+                <span class="label">
+                    Liczba wpływów
+                </span>
+
+                <strong>
+                    {{ transactions | length }}
+                </strong>
+
+            </div>
+
+            <div class="report-summary-card">
+
+                <span class="label">
+                    Łącznie
+                </span>
+
+                <strong>
+                    {{ "{:,.2f}".format(total_amount).replace(",", " ").replace(".", ",") }} zł
+                </strong>
+
+            </div>
+
+        </div>
+
+
+        <div class="report-results">
+
+            <h2>
+                Wpływy
+            </h2>
+
+            {% if transactions %}
+
+                <div class="report-table-wrapper">
+
+                    <table class="report-table">
+
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Data</th>
+                                <th>Źródło</th>
+                                <th>Domek</th>
+                                <th>Kwota</th>
+                                <th>Opis</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            {% for transaction in transactions %}
+
+                                <tr>
+
+                                    <td>
+                                        {{ transaction.id }}
+                                    </td>
+
+                                    <td>
+                                        {{ transaction.transaction_date }}
+                                    </td>
+
+                                    <td>
+                                        {{ transaction.source_id }}
+                                    </td>
+
+                                    <td>
+                                        {{ transaction.cottage_id or "—" }}
+                                    </td>
+
+                                    <td>
+                                        {{ "{:,.2f}".format(transaction.amount).replace(",", " ").replace(".", ",") }} zł
+                                    </td>
+
+                                    <td>
+                                        {{ transaction.description or "—" }}
+                                    </td>
+
+                                    <td>
+                                        {{ transaction.notes or "—" }}
+                                    </td>
+
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            {% else %}
+
+                <div class="no-availability">
+
+                    <strong>
+                        Brak wpływów
+                    </strong>
+
+                    <p>
+                        W wybranym okresie nie ma żadnych wpływów.
+                    </p>
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+</body>
+</html>

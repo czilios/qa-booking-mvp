@@ -6,14 +6,17 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Form
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
+from httpx2 import request
 from pydantic import BaseModel, Field
 
+from app.repositories.bank_transaction_repository import BankTransactionRepository
 from app.reservation_service import create_reservation, generate_accounting_report, update_reservation
 from app.payment_service import create_payment, mark_payment_as_paid, generate_payment_report
 from app.reservation_service import cancel_reservation, generate_overall_report, create_historical_reservation
 from app.customer_service import create_customer, get_customer, update_customer
 from app.availability_service import AvailabilityService
 from app.overall_report_service import generate_overall_report
+from app.bank_transaction_service import list_bank_transactions, sum_bank_transactions,create_bank_transaction
 
 
 from app.repositories.block_repository import BlockRepository
@@ -718,5 +721,87 @@ def create_historical_ui_reservation(
 
     return RedirectResponse(
         url=f"/ui/reservations/{reservation_id}",
+        status_code=303,
+    )
+
+@app.get("/ui/bank-transactions")
+def bank_transactions_ui(
+    request: Request,
+    month: int | None = None,
+    year: int | None = None,
+    db_connection=Depends(get_db_connection),
+):
+    transactions = None
+    total_amount = None
+
+    if month is not None and year is not None:
+        if month == 12:
+            start_date = date(year, 12, 1)
+            end_date = date(year + 1, 1, 1)
+        else:
+            start_date = date(year, month, 1)
+            end_date = date(year, month + 1, 1)
+
+        transactions = list_bank_transactions(
+            connection=db_connection,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        total_amount = sum_bank_transactions(
+            connection=db_connection,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    return templates.TemplateResponse(
+        request=request,
+        name="bank_transactions.html",
+        context={
+            "request": request,
+            "month": month,
+            "year": year,
+            "transactions": transactions,
+            "total_amount": total_amount,
+        },
+    )
+
+@app.post("/ui/bank-transactions")
+def create_bank_transaction_ui(
+    transaction_date: date = Form(...),
+    source_id: int = Form(...),
+    cottage_id: int | None = Form(None),
+    amount: Decimal = Form(...),
+    description: str | None = Form(None),
+    notes: str | None = Form(None),
+    db_connection=Depends(get_db_connection),
+):
+    try:
+        transaction_id = create_bank_transaction(
+            connection=db_connection,
+            transaction_date=transaction_date,
+            source_id=source_id,
+            cottage_id=cottage_id,
+            amount=amount,
+            description=description,
+            notes=notes,
+        )
+
+        db_connection.commit()
+
+    except ValueError as exc:
+        db_connection.rollback()
+
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        )
+
+    return RedirectResponse(
+        url=(
+            f"/ui/bank-transactions"
+            f"?month={transaction_date.month}"
+            f"&year={transaction_date.year}"
+        ),
         status_code=303,
     )

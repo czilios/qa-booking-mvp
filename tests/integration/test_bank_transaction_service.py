@@ -130,3 +130,15 @@ def test_create_bank_transaction_service(
     assert Decimal(str(transaction["amount"])) == Decimal("800.00")
     assert transaction["description"] == "Przelew Direct"
     assert transaction["notes"] == "testing"
+
+
+def test_sum_bank_transactions_returns_zero_for_empty_range(
+    db_connection,
+):
+    total = sum_bank_transactions(
+        connection=db_connection,
+        start_date=date(2026, 5, 1),
+        end_date=date(2026, 6, 1),
+    )
+
+    assert Decimal(str(total)) == Decimal("0.00")
