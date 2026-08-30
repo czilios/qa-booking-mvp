@@ -6,7 +6,7 @@ import pytest
 from app.repositories.reservation_repository import ReservationRepository
 
 
-def test_accounting_report_includes_completed_booking_reservations(
+def test_bank_statement_report_includes_completed_booking_reservations(
     db_connection,
     api_client,
     created_reservation_cleanup,
@@ -31,7 +31,7 @@ def test_accounting_report_includes_completed_booking_reservations(
     db_connection.commit()
 
     response = api_client.get(
-        "/api/accounting-report",
+        "/api/bank-statement-report",
         params={
             "start_date": "2027-10-01",
             "end_date": "2027-11-01",
@@ -60,7 +60,7 @@ def test_accounting_report_includes_completed_booking_reservations(
         (date(2027, 11, 1), 0),
     ],
 )
-def test_accounting_report_respects_date_boundaries(
+def test_bank_statement_report_respects_date_boundaries(
     db_connection,
     api_client,
     created_reservation_cleanup,
@@ -87,7 +87,7 @@ def test_accounting_report_respects_date_boundaries(
     db_connection.commit()
 
     response = api_client.get(
-        "/api/accounting-report",
+        "/api/bank-statement-report",
         params={
             "start_date": "2027-10-01",
             "end_date": "2027-11-01",
@@ -100,7 +100,7 @@ def test_accounting_report_respects_date_boundaries(
 
     assert len(body["reservations"]) == expected_count
 
-def test_accounting_report_respects_accounting_included(
+def test_bank_statement_report_respects_accounting_included(
     db_connection,
     api_client,
     created_reservation_cleanup,
@@ -139,7 +139,7 @@ def test_accounting_report_respects_accounting_included(
     db_connection.commit()
 
     response = api_client.get(
-        "/api/accounting-report",
+        "/api/bank-statement-report",
         params={
             "start_date": "2027-10-01",
             "end_date": "2027-11-01",
@@ -158,7 +158,7 @@ def test_accounting_report_respects_accounting_included(
     assert included_reservation_id in reservation_ids
     assert excluded_reservation_id not in reservation_ids
 
-def test_accounting_report_excludes_non_accounting_reservation(
+def test_bank_statement_report_excludes_non_accounting_reservation(
     db_connection,
     api_client,
     created_reservation_cleanup,
@@ -183,7 +183,7 @@ def test_accounting_report_excludes_non_accounting_reservation(
     db_connection.commit()
 
     response = api_client.get(
-        "/api/accounting-report",
+        "/api/bank-statement-report",
         params={
             "start_date": "2027-10-01",
             "end_date": "2027-11-01",
@@ -201,11 +201,11 @@ def test_accounting_report_excludes_non_accounting_reservation(
 
     assert reservation_id not in reservation_ids
 
-def test_accounting_report_ui_get(
+def test_bank_statement_report_ui_get(
     api_client,
 ):
     response = api_client.get(
-        "/ui/reports/accounting?year=2026"
+        "/ui/reports/bank-statement?year=2026"
     )
 
     assert response.status_code == 200

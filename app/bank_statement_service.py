@@ -5,7 +5,7 @@ from app.repositories.bank_transaction_repository import (
     BankTransactionRepository,
 )
 
-class AccountingReportService:
+class BankStatementReportService:
     def __init__(self, payment_repository):
         self.payment_repository = payment_repository
 
@@ -70,7 +70,7 @@ class AccountingReportService:
         **report,
         }
     
-    def generate_accounting_report(
+    def generate_bank_statement_report(
     self,
     bank_transaction_repository,
     year: int,

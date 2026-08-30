@@ -1,13 +1,13 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from app.accounting_report_service import AccountingReportService
+from app.bank_statement_service import BankStatementReportService
 from app.repositories.payment_repository import PaymentRepository
 from app.repositories.reservation_repository import ReservationRepository
 from app.repositories.bank_transaction_repository import BankTransactionRepository
 
 
-def test_generate_monthly_accounting_report(db_connection):
+def test_generate_monthly_bank_statement_report(db_connection):
     reservation_repository = ReservationRepository(db_connection)
     payment_repository = PaymentRepository(db_connection)
 
@@ -31,11 +31,11 @@ def test_generate_monthly_accounting_report(db_connection):
         datetime(2026, 11, 15, 10, 0, 0),
     )
 
-    accounting_report_service = AccountingReportService(
+    bank_statement_report_service = BankStatementReportService(
         payment_repository=payment_repository
     )
 
-    report = accounting_report_service.generate_monthly_report(
+    report = bank_statement_report_service.generate_monthly_report(
         2026,
         11,
     )
@@ -94,11 +94,11 @@ def test_generate_monthly_report_uses_paid_at_month(
         datetime(2026, 11, 1, 0, 0, 1),
     )
 
-    accounting_report_service = AccountingReportService(
+    bank_statement_report_service = BankStatementReportService(
         payment_repository=payment_repository
     )
 
-    report = accounting_report_service.generate_monthly_report(
+    report = bank_statement_report_service.generate_monthly_report(
         2026,
         11,
     )
@@ -112,11 +112,11 @@ def test_generate_monthly_report_with_no_payments_returns_empty_report(
 ):
     payment_repository = PaymentRepository(db_connection)
 
-    accounting_report_service = AccountingReportService(
+    bank_statement_report_service = BankStatementReportService(
         payment_repository=payment_repository
     )
 
-    report = accounting_report_service.generate_monthly_report(
+    report = bank_statement_report_service.generate_monthly_report(
         2026,
         11,
     )
@@ -170,11 +170,11 @@ def test_generate_monthly_report_with_multiple_payments(
         datetime(2026, 11, 20, 15, 30, 0),
     )
 
-    accounting_report_service = AccountingReportService(
+    bank_statement_report_service = BankStatementReportService(
         payment_repository=payment_repository
     )
 
-    report = accounting_report_service.generate_monthly_report(
+    report = bank_statement_report_service.generate_monthly_report(
         2026,
         11,
     )
@@ -228,14 +228,14 @@ def test_generate_payment_report_for_date_range(db_connection):
         datetime(2026, 11, 25, 15, 30, 0),
     )
 
-    accounting_report_service = AccountingReportService(
+    bank_statement_report_service = BankStatementReportService(
         payment_repository=payment_repository
     )
 
     start_date = datetime(2026, 11, 14)
     end_date = datetime(2026, 11, 21)
 
-    report = accounting_report_service.generate_payment_report(
+    report = bank_statement_report_service.generate_payment_report(
         start_date=start_date,
         end_date=end_date,
     )
@@ -281,14 +281,14 @@ def test_generate_payment_report_for_split_payments(db_connection):
         datetime(2028, 11, 1, 15, 30, 0),
     )
 
-    accounting_report_service = AccountingReportService(
+    bank_statement_report_service = BankStatementReportService(
         payment_repository=payment_repository
     )
 
     start_date = datetime(2026, 11, 14)
     end_date = datetime(2028, 11, 21)
 
-    report = accounting_report_service.generate_payment_report(
+    report = bank_statement_report_service.generate_payment_report(
         start_date=start_date,
         end_date=end_date,
     )
@@ -302,17 +302,17 @@ def test_generate_payment_report_for_split_payments(db_connection):
     assert report["rows"][0]["paid_at"] == datetime(2027, 11, 15, 10, 0, 0)
     assert report["rows"][1]["paid_at"] == datetime(2028, 11, 1, 15, 30, 0)
 
-def test_generate_accounting_report_for_empty_year(
+def test_generate_bank_statement_report_for_empty_year(
     db_connection,
 ):
     payment_repository = PaymentRepository(db_connection)
     bank_transaction_repository = BankTransactionRepository(db_connection)
 
-    accounting_report_service = AccountingReportService(
+    bank_statement_report_service = BankStatementReportService(
         payment_repository=payment_repository,
     )
 
-    report = accounting_report_service.generate_accounting_report(
+    report = bank_statement_report_service.generate_bank_statement_report(
         bank_transaction_repository=bank_transaction_repository,
         year=2026,
     )

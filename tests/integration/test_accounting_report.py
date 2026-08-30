@@ -1,14 +1,14 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from app.accounting_report_service import AccountingReportService
+from app.bank_statement_service import BankStatementReportService
 from app.repositories.bank_transaction_repository import (
     BankTransactionRepository,
 )
 from app.repositories.payment_repository import PaymentRepository
 from app.repositories.reservation_repository import ReservationRepository
 
-def test_accounting_report_june_and_july_and_august(
+def test_bank_statement_report_june_and_july_and_august(
     db_connection,
     created_bank_transaction_cleanup,
 ):
@@ -58,7 +58,7 @@ def test_accounting_report_june_and_july_and_august(
 
     db_connection.commit()
 
-def test_accounting_report_calculates_net_and_vat(
+def test_bank_statement_report_calculates_net_and_vat(
     db_connection,
     created_bank_transaction_cleanup,
 ):
@@ -76,11 +76,11 @@ def test_accounting_report_calculates_net_and_vat(
 
     db_connection.commit()
 
-    accounting_report_service = AccountingReportService(
+    bank_statement_report_service = BankStatementReportService(
         payment_repository=None,
     )
 
-    report = accounting_report_service.generate_accounting_report(
+    report = bank_statement_report_service.generate_bank_statement_report(
         bank_transaction_repository=repository,
         year=2026,
         notes="testing",
@@ -92,7 +92,7 @@ def test_accounting_report_calculates_net_and_vat(
     assert august["monthly_net"] == Decimal("1000.00")
     assert august["monthly_vat"] == Decimal("80.00")
 
-def test_accounting_report_calculates_carry_over(
+def test_bank_statement_report_calculates_carry_over(
     db_connection,
     created_bank_transaction_cleanup,
 ):
@@ -128,11 +128,11 @@ def test_accounting_report_calculates_carry_over(
 
     db_connection.commit()
 
-    accounting_report_service = AccountingReportService(
+    bank_statement_report_service = BankStatementReportService(
         payment_repository=None,
     )
 
-    report = accounting_report_service.generate_accounting_report(
+    report = bank_statement_report_service.generate_bank_statement_report(
         bank_transaction_repository=repository,
         year=2026,
         notes="testing",
@@ -151,7 +151,7 @@ def test_accounting_report_calculates_carry_over(
     assert august["carry_over_gross"] == Decimal("11596.54")
     assert august["total_gross"] == Decimal("13810.54")
 
-def test_accounting_report_calculates_carry_over_net_and_vat(
+def test_bank_statement_report_calculates_carry_over_net_and_vat(
     db_connection,
     created_bank_transaction_cleanup,
 ):
@@ -185,11 +185,11 @@ def test_accounting_report_calculates_carry_over_net_and_vat(
 
     db_connection.commit()
 
-    accounting_report_service = AccountingReportService(
+    bank_statement_report_service = BankStatementReportService(
         payment_repository=None,
     )
 
-    report = accounting_report_service.generate_accounting_report(
+    report = bank_statement_report_service.generate_bank_statement_report(
         bank_transaction_repository=repository,
         year=2026,
         notes="testing",
@@ -211,7 +211,7 @@ def test_accounting_report_calculates_carry_over_net_and_vat(
     assert august["carry_over_net"] == Decimal("2000.00")
     assert august["carry_over_vat"] == Decimal("160.00")
 
-def test_accounting_report_calculates_total_net_and_vat(
+def test_bank_statement_report_calculates_total_net_and_vat(
     db_connection,
     created_bank_transaction_cleanup,
 ):
@@ -247,11 +247,11 @@ def test_accounting_report_calculates_total_net_and_vat(
 
     db_connection.commit()
 
-    accounting_report_service = AccountingReportService(
+    bank_statement_report_service = BankStatementReportService(
         payment_repository=None,
     )
 
-    report = accounting_report_service.generate_accounting_report(
+    report = bank_statement_report_service.generate_bank_statement_report(
     bank_transaction_repository=repository,
     year=2026,
     notes="testing",
@@ -270,7 +270,7 @@ def test_accounting_report_calculates_total_net_and_vat(
     assert august["total_net"] == Decimal("3000.00")
     assert august["total_vat"] == Decimal("240.00")
 
-def test_accounting_report_calculates_final_totals(
+def test_bank_statement_report_calculates_final_totals(
     db_connection,
     created_bank_transaction_cleanup,
 ):
@@ -306,11 +306,11 @@ def test_accounting_report_calculates_final_totals(
 
     db_connection.commit()
 
-    accounting_report_service = AccountingReportService(
+    bank_statement_report_service = BankStatementReportService(
         payment_repository=None,
     )
 
-    report = accounting_report_service.generate_accounting_report(
+    report = bank_statement_report_service.generate_bank_statement_report(
     bank_transaction_repository=repository,
     year=2026,
     notes="testing",

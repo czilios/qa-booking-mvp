@@ -159,7 +159,7 @@ def cancel_reservation(
         status="CANCELLED",
     )
 
-def generate_accounting_report(
+def generate_bank_statement_report(
     connection: Connection,
     start_date: date,
     end_date: date,
