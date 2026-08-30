@@ -29,6 +29,7 @@ def test_bank_transactions_ui_get_for_month(
         source_id=1,
         cottage_id=2,
         amount=Decimal("500.00"),
+        notes= "testing",
     )
 
     august_id = repository.create(
@@ -36,6 +37,7 @@ def test_bank_transactions_ui_get_for_month(
         source_id=2,
         cottage_id=2,
         amount=Decimal("2427.05"),
+        notes= "testing",
     )
 
     created_bank_transaction_cleanup.extend(
@@ -45,8 +47,8 @@ def test_bank_transactions_ui_get_for_month(
     db_connection.commit()
 
     response = api_client.get(
-        "/ui/bank-transactions?month=8&year=2026"
-    )
+    "/ui/bank-transactions?month=8&year=2026&notes=testing"
+)
 
     assert response.status_code == 200
     assert "2 427,05" in response.text
@@ -56,7 +58,7 @@ def test_bank_transactions_ui_get_for_month_with_no_transactions(
     api_client,
 ):
     response = api_client.get(
-        "/ui/bank-transactions?month=9&year=2026"
+        "/ui/bank-transactions?month=9&year=2026&notes=testing"
     )
 
     assert response.status_code == 200

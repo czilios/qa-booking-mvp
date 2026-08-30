@@ -12,12 +12,15 @@ def list_bank_transactions(
     connection: Connection,
     start_date: date,
     end_date: date,
+    notes: str | None = None,
+
 ):
     repository = BankTransactionRepository(connection)
 
     return repository.list_by_date_range(
         start_date=start_date,
         end_date=end_date,
+        notes=notes,
     )
 
 
@@ -25,12 +28,14 @@ def sum_bank_transactions(
     connection: Connection,
     start_date: date,
     end_date: date,
+    notes: str | None = None,
 ) -> Decimal:
     repository = BankTransactionRepository(connection)
 
     return repository.sum_by_date_range(
         start_date=start_date,
         end_date=end_date,
+        notes=notes,
     )
 
 def create_bank_transaction(

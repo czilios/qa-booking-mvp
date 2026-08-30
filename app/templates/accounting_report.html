@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Raport księgowy - {{ year }}
+{% endblock %}
+
+{% block content %}
+
+<div class="container report-container">
+
+    <h1>Wrzosowo 159</h1>
+
+    <h2>Raport księgowy {{ year }}</h2>
+
+    <div class="report-results">
+
+        <table class="report-table">
+
+            <thead>
+                <tr>
+                    <th>Miesiąc</th>
+                    <th>Wpływy netto</th>
+                    <th>VAT 8%</th>
+                    <th>Wpływy brutto</th>
+                    <th>Przeniesienie netto</th>
+                    <th>Przeniesienie VAT</th>
+                    <th>Przeniesienie brutto</th>
+                    <th>Razem netto</th>
+                    <th>Razem VAT</th>
+                    <th>Razem brutto</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for month in months %}
+
+                    <tr>
+
+                        <td>
+                            {% if month.month == 1 %}Styczeń
+                            {% elif month.month == 2 %}Luty
+                            {% elif month.month == 3 %}Marzec
+                            {% elif month.month == 4 %}Kwiecień
+                            {% elif month.month == 5 %}Maj
+                            {% elif month.month == 6 %}Czerwiec
+                            {% elif month.month == 7 %}Lipiec
+                            {% elif month.month == 8 %}Sierpień
+                            {% elif month.month == 9 %}Wrzesień
+                            {% elif month.month == 10 %}Październik
+                            {% elif month.month == 11 %}Listopad
+                            {% elif month.month == 12 %}Grudzień
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {{ "{:,.2f}".format(month.monthly_net).replace(",", " ").replace(".", ",") }} zł
+                        </td>
+
+                        <td>
+                            {{ "{:,.2f}".format(month.monthly_vat).replace(",", " ").replace(".", ",") }} zł
+                        </td>
+
+                        <td>
+                            {{ "{:,.2f}".format(month.monthly_gross).replace(",", " ").replace(".", ",") }} zł
+                        </td>
+
+                        <td>
+                            {{ "{:,.2f}".format(month.carry_over_net).replace(",", " ").replace(".", ",") }} zł
+                        </td>
+
+                        <td>
+                            {{ "{:,.2f}".format(month.carry_over_vat).replace(",", " ").replace(".", ",") }} zł
+                        </td>
+
+                        <td>
+                            {{ "{:,.2f}".format(month.carry_over_gross).replace(",", " ").replace(".", ",") }} zł
+                        </td>
+
+                        <td>
+                            {{ "{:,.2f}".format(month.total_net).replace(",", " ").replace(".", ",") }} zł
+                        </td>
+
+                        <td>
+                            {{ "{:,.2f}".format(month.total_vat).replace(",", " ").replace(".", ",") }} zł
+                        </td>
+
+                        <td>
+                            {{ "{:,.2f}".format(month.total_gross).replace(",", " ").replace(".", ",") }} zł
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+    <div class="report-summary">
+
+        <div class="report-summary-card">
+
+            <span class="label">
+                Suma netto
+            </span>
+
+            <strong>
+                {{ "{:,.2f}".format(total_net).replace(",", " ").replace(".", ",") }} zł
+            </strong>
+
+        </div>
+
+        <div class="report-summary-card">
+
+            <span class="label">
+                VAT 8%
+            </span>
+
+            <strong>
+                {{ "{:,.2f}".format(total_vat).replace(",", " ").replace(".", ",") }} zł
+            </strong>
+
+        </div>
+
+        <div class="report-summary-card">
+
+            <span class="label">
+                Suma brutto
+            </span>
+
+            <strong>
+                {{ "{:,.2f}".format(total_gross).replace(",", " ").replace(".", ",") }} zł
+            </strong>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

@@ -74,6 +74,7 @@ class AccountingReportService:
     self,
     bank_transaction_repository,
     year: int,
+    notes: str | None = None,
     ):
         months = []
 
@@ -90,6 +91,7 @@ class AccountingReportService:
             transactions = bank_transaction_repository.list_by_date_range(
                 start_date=start_date.date(),
                 end_date=end_date.date(),
+                notes=notes,
             )
 
             monthly_gross = sum(

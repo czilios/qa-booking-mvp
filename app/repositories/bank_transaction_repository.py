@@ -64,14 +64,15 @@ class BankTransactionRepository:
             )
 
             return cursor.fetchone()
-
     def list_by_date_range(
-        self,
-        start_date: date,
-        end_date: date,
+    self,
+    start_date: date,
+    end_date: date,
+    notes: str | None = None,
     ):
         with self.connection.cursor() as cursor:
-            cursor.execute(
+            if notes is None:
+                cursor.execute(
                 """
                 SELECT
                     id,
@@ -87,25 +88,57 @@ class BankTransactionRepository:
                 ORDER BY transaction_date, id
                 """,
                 (start_date, end_date),
+                )
+            else:
+                cursor.execute(
+                """
+                SELECT
+                    id,
+                    transaction_date,
+                    source_id,
+                    cottage_id,
+                    amount,
+                    description,
+                    notes
+                FROM bank_transactions
+                WHERE transaction_date >= %s
+                AND transaction_date < %s
+                AND notes = %s
+                ORDER BY transaction_date, id
+                """,
+                (start_date, end_date, notes),
             )
 
-            return cursor.fetchall()
-        
+        return cursor.fetchall()
+   
     def sum_by_date_range(
     self,
     start_date: date,
     end_date: date,
+    notes: str | None = None,
     ):
         with self.connection.cursor() as cursor:
-            cursor.execute(
-            """
-            SELECT COALESCE(SUM(amount), 0) AS total
-            FROM bank_transactions
-            WHERE transaction_date >= %s
-              AND transaction_date < %s
-            """,
-            (start_date, end_date),
-        )
+            if notes is None:
+                cursor.execute(
+                """
+                SELECT COALESCE(SUM(amount), 0) AS total
+                FROM bank_transactions
+                WHERE transaction_date >= %s
+                  AND transaction_date < %s
+                """,
+                (start_date, end_date),
+            )
+            else:
+                cursor.execute(
+                """
+                SELECT COALESCE(SUM(amount), 0) AS total
+                FROM bank_transactions
+                WHERE transaction_date >= %s
+                  AND transaction_date < %s
+                  AND notes = %s
+                """,
+                (start_date, end_date, notes),
+            )
 
         return cursor.fetchone()["total"]
     
@@ -114,9 +147,11 @@ class BankTransactionRepository:
     source_id: int,
     start_date: date,
     end_date: date,
+    notes: str | None = None,
     ):
         with self.connection.cursor() as cursor:
-            cursor.execute(
+            if notes is None:
+                cursor.execute(
                 """
                 SELECT COALESCE(SUM(amount), 0) AS total
                 FROM bank_transactions
@@ -126,24 +161,51 @@ class BankTransactionRepository:
                 """,
                 (source_id, start_date, end_date),
             )
+            else:
+                cursor.execute(
+                """
+                SELECT COALESCE(SUM(amount), 0) AS total
+                FROM bank_transactions
+                WHERE source_id = %s
+                  AND transaction_date >= %s
+                  AND transaction_date < %s
+                  AND notes = %s
+                """,
+                (source_id, start_date, end_date, notes),
+            )
 
             return cursor.fetchone()["total"]
+        
     def sum_by_cottage_and_date_range(
     self,
     cottage_id: int,
     start_date: date,
     end_date: date,
-   ):
+    notes: str | None = None,
+    ):
         with self.connection.cursor() as cursor:
-            cursor.execute(
-            """
-            SELECT COALESCE(SUM(amount), 0) AS total
-            FROM bank_transactions
-            WHERE cottage_id = %s
-              AND transaction_date >= %s
-              AND transaction_date < %s
-            """,
-            (cottage_id, start_date, end_date),
-        )
+            if notes is None:
+                cursor.execute(
+                """
+                SELECT COALESCE(SUM(amount), 0) AS total
+                FROM bank_transactions
+                WHERE cottage_id = %s
+                  AND transaction_date >= %s
+                  AND transaction_date < %s
+                """,
+                (cottage_id, start_date, end_date),
+            )
+            else:
+                cursor.execute(
+                """
+                SELECT COALESCE(SUM(amount), 0) AS total
+                FROM bank_transactions
+                WHERE cottage_id = %s
+                  AND transaction_date >= %s
+                  AND transaction_date < %s
+                  AND notes = %s
+                """,
+                (cottage_id, start_date, end_date, notes),
+            )
 
         return cursor.fetchone()["total"]

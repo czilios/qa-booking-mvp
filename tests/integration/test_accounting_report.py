@@ -69,6 +69,7 @@ def test_accounting_report_calculates_net_and_vat(
         source_id=1,
         cottage_id=2,
         amount=Decimal("1080.00"),
+        notes="testing"
     )
 
     created_bank_transaction_cleanup.append(transaction_id)
@@ -82,6 +83,7 @@ def test_accounting_report_calculates_net_and_vat(
     report = accounting_report_service.generate_accounting_report(
         bank_transaction_repository=repository,
         year=2026,
+        notes="testing",
     )
 
     august = report["months"][7]
@@ -101,6 +103,7 @@ def test_accounting_report_calculates_carry_over(
         source_id=1,
         cottage_id=None,
         amount=Decimal("2300.00"),
+        notes="testing"
     )
 
     july_id = repository.create(
@@ -108,6 +111,7 @@ def test_accounting_report_calculates_carry_over(
         source_id=1,
         cottage_id=None,
         amount=Decimal("9296.54"),
+        notes="testing"
     )
 
     august_id = repository.create(
@@ -115,6 +119,7 @@ def test_accounting_report_calculates_carry_over(
         source_id=1,
         cottage_id=None,
         amount=Decimal("2214.00"),
+        notes="testing"
     )
 
     created_bank_transaction_cleanup.extend(
@@ -130,6 +135,7 @@ def test_accounting_report_calculates_carry_over(
     report = accounting_report_service.generate_accounting_report(
         bank_transaction_repository=repository,
         year=2026,
+        notes="testing",
     )
 
     june = report["months"][5]
@@ -155,6 +161,7 @@ def test_accounting_report_calculates_carry_over_net_and_vat(
     source_id=1,
     cottage_id=None,
     amount=Decimal("1080.00"),
+    notes="testing"
     )
 
     july_id = repository.create(
@@ -162,6 +169,7 @@ def test_accounting_report_calculates_carry_over_net_and_vat(
     source_id=1,
     cottage_id=None,
     amount=Decimal("1080.00"),
+    notes="testing"
     )
 
     august_id = repository.create(
@@ -169,6 +177,7 @@ def test_accounting_report_calculates_carry_over_net_and_vat(
     source_id=1,
     cottage_id=None,
     amount=Decimal("1080.00"),
+    notes="testing"     
  )
     created_bank_transaction_cleanup.extend(
         [june_id, july_id, august_id]
@@ -183,6 +192,7 @@ def test_accounting_report_calculates_carry_over_net_and_vat(
     report = accounting_report_service.generate_accounting_report(
         bank_transaction_repository=repository,
         year=2026,
+        notes="testing",
     )
 
     june = report["months"][5]
@@ -212,6 +222,7 @@ def test_accounting_report_calculates_total_net_and_vat(
         source_id=1,
         cottage_id=None,
         amount=Decimal("1080.00"),
+        notes="testing"
     )
 
     july_id = repository.create(
@@ -219,6 +230,7 @@ def test_accounting_report_calculates_total_net_and_vat(
         source_id=1,
         cottage_id=None,
         amount=Decimal("1080.00"),
+        notes="testing"     
     )
 
     august_id = repository.create(
@@ -226,6 +238,7 @@ def test_accounting_report_calculates_total_net_and_vat(
         source_id=1,
         cottage_id=None,
         amount=Decimal("1080.00"),
+        notes="testing"
     )
 
     created_bank_transaction_cleanup.extend(
@@ -239,8 +252,9 @@ def test_accounting_report_calculates_total_net_and_vat(
     )
 
     report = accounting_report_service.generate_accounting_report(
-        bank_transaction_repository=repository,
-        year=2026,
+    bank_transaction_repository=repository,
+    year=2026,
+    notes="testing",
     )
 
     june = report["months"][5]
@@ -267,6 +281,7 @@ def test_accounting_report_calculates_final_totals(
         source_id=1,
         cottage_id=None,
         amount=Decimal("1080.00"),
+        notes="testing"
     )
 
     july_id = repository.create(
@@ -274,6 +289,7 @@ def test_accounting_report_calculates_final_totals(
         source_id=1,
         cottage_id=None,
         amount=Decimal("1080.00"),
+        notes="testing"
     )
 
     august_id = repository.create(
@@ -281,6 +297,7 @@ def test_accounting_report_calculates_final_totals(
         source_id=1,
         cottage_id=None,
         amount=Decimal("1080.00"),
+        notes="testing"
     )
 
     created_bank_transaction_cleanup.extend(
@@ -294,9 +311,10 @@ def test_accounting_report_calculates_final_totals(
     )
 
     report = accounting_report_service.generate_accounting_report(
-        bank_transaction_repository=repository,
-        year=2026,
-    )
+    bank_transaction_repository=repository,
+    year=2026,
+    notes="testing",
+)
 
     assert report["total_gross"] == Decimal("3240.00")
     assert report["total_net"] == Decimal("3000.00")

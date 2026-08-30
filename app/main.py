@@ -9,16 +9,17 @@ from fastapi.responses import RedirectResponse
 from httpx2 import request
 from pydantic import BaseModel, Field
 
-from app.repositories.bank_transaction_repository import BankTransactionRepository
+
 from app.reservation_service import create_reservation, generate_accounting_report, update_reservation
 from app.payment_service import create_payment, mark_payment_as_paid, generate_payment_report
 from app.reservation_service import cancel_reservation, generate_overall_report, create_historical_reservation
 from app.customer_service import create_customer, get_customer, update_customer
 from app.availability_service import AvailabilityService
+from app.accounting_report_service import AccountingReportService
 from app.overall_report_service import generate_overall_report
 from app.bank_transaction_service import list_bank_transactions, sum_bank_transactions,create_bank_transaction
 
-
+from app.repositories.bank_transaction_repository import BankTransactionRepository
 from app.repositories.block_repository import BlockRepository
 from app.repositories.cottage_repository import CottageRepository
 from app.repositories.reservation_repository import ReservationRepository
@@ -625,6 +626,38 @@ def get_accounting_report(
         end_date=end_date,
     )
 
+@app.get("/ui/reports/accounting")
+def accounting_report_ui(
+    request: Request,
+    year: int,
+    db_connection=Depends(get_db_connection),
+):
+    bank_transaction_repository = BankTransactionRepository(
+        db_connection
+    )
+
+    accounting_report_service = AccountingReportService(
+        payment_repository=None,
+    )
+
+    report = accounting_report_service.generate_accounting_report(
+        bank_transaction_repository=bank_transaction_repository,
+        year=year,
+    )
+
+    return templates.TemplateResponse(
+        request=request,
+        name="accounting_report.html",
+        context={
+            "request": request,
+            "year": year,
+            "months": report["months"],
+            "total_gross": report["total_gross"],
+            "total_net": report["total_net"],
+            "total_vat": report["total_vat"],
+        },
+    )
+
 @app.get("/api/overall-report")
 def get_overall_report(
     start_date: date,
@@ -729,6 +762,7 @@ def bank_transactions_ui(
     request: Request,
     month: int | None = None,
     year: int | None = None,
+    notes: str | None = None,
     db_connection=Depends(get_db_connection),
 ):
     transactions = None
@@ -746,12 +780,14 @@ def bank_transactions_ui(
             connection=db_connection,
             start_date=start_date,
             end_date=end_date,
+            notes=notes,
         )
 
         total_amount = sum_bank_transactions(
             connection=db_connection,
             start_date=start_date,
             end_date=end_date,
+            notes=notes,
         )
 
     return templates.TemplateResponse(

@@ -21,3 +21,7 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Local startup scripts
+start_mvp.bat
+start_ui.bat

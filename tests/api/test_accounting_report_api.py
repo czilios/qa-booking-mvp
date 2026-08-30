@@ -200,3 +200,16 @@ def test_accounting_report_excludes_non_accounting_reservation(
     }
 
     assert reservation_id not in reservation_ids
+
+def test_accounting_report_ui_get(
+    api_client,
+):
+    response = api_client.get(
+        "/ui/reports/accounting?year=2026"
+    )
+
+    assert response.status_code == 200
+    assert "Raport księgowy" in response.text
+    assert "Czerwiec" in response.text
+    assert "Lipiec" in response.text
+    assert "Sierpień" in response.text

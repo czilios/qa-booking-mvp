@@ -22,6 +22,7 @@ def test_list_bank_transactions_by_date_range(
         source_id=1,
         cottage_id=2,
         amount=Decimal("500.00"),
+        notes="testing"
     )
 
     august_id = repository.create(
@@ -29,6 +30,7 @@ def test_list_bank_transactions_by_date_range(
         source_id=1,
         cottage_id=2,
         amount=Decimal("1000.00"),
+        notes="testing"
     )
 
     created_bank_transaction_cleanup.extend(
@@ -41,6 +43,7 @@ def test_list_bank_transactions_by_date_range(
         connection=db_connection,
         start_date=date(2026, 7, 1),
         end_date=date(2026, 8, 1),
+        notes="testing"
     )
 
     transaction_ids = [
@@ -61,6 +64,7 @@ def test_sum_bank_transactions_by_date_range(
         source_id=1,
         cottage_id=2,
         amount=Decimal("100.00"),
+        notes="testing"
     )
 
     july_2_id = repository.create(
@@ -68,6 +72,7 @@ def test_sum_bank_transactions_by_date_range(
         source_id=1,
         cottage_id=2,
         amount=Decimal("500.00"),
+        notes="testing"
     )
 
     july_3_id = repository.create(
@@ -75,6 +80,7 @@ def test_sum_bank_transactions_by_date_range(
         source_id=2,
         cottage_id=None,
         amount=Decimal("600.00"),
+        notes="testing"
     )
 
     august_id = repository.create(
@@ -82,6 +88,7 @@ def test_sum_bank_transactions_by_date_range(
         source_id=2,
         cottage_id=None,
         amount=Decimal("1000.00"),
+        notes="testing"     
     )
 
     created_bank_transaction_cleanup.extend(
@@ -99,6 +106,7 @@ def test_sum_bank_transactions_by_date_range(
         connection=db_connection,
         start_date=date(2026, 7, 1),
         end_date=date(2026, 8, 1),
+        notes="testing"
     )
 
     assert Decimal(str(total)) == Decimal("1200.00")
