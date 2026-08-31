@@ -265,3 +265,76 @@ class ReservationRepository:
         )
 
         return cursor.fetchall()
+    def get_confirmed_reservations_by_check_in_between(
+    self,
+    start_date: date,
+    end_date: date,
+    ):
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+            """
+            SELECT
+                id,
+                cottage_id,
+                customer_id,
+                source_id,
+                check_in,
+                check_out,
+                guests_count,
+                status,
+                total_amount,
+                accounting_included
+            FROM reservations
+            WHERE status = 'CONFIRMED'
+              AND check_in >= %s
+              AND check_in < %s
+            ORDER BY check_in, id
+            """,
+            (
+                start_date,
+                end_date,
+            ),
+        )
+
+        return cursor.fetchall()
+    
+    def get_confirmed_reservations_by_check_in_between(
+    self,
+    start_date: date,
+    end_date: date,
+    ):
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+            """
+            SELECT
+                r.id,
+                r.cottage_id,
+                r.customer_id,
+                r.source_id,
+                r.check_in,
+                r.check_out,
+                r.guests_count,
+                r.status,
+                r.total_amount,
+                r.accounting_included,
+                rs.code AS source_code,
+                rs.name AS source_name,
+                c.phone
+            FROM reservations r
+            JOIN reservation_sources rs
+                ON rs.id = r.source_id
+            LEFT JOIN customers c
+                ON c.id = r.customer_id
+            WHERE r.status = 'CONFIRMED'
+            AND r.check_in >= %s
+            AND r.check_in < %s
+            ORDER BY r.check_in, r.id
+            """,
+            (
+                start_date,
+                end_date,
+            ),
+        )
+
+        return cursor.fetchall()
+    

@@ -14,8 +14,8 @@ def test_overall_report_includes_reservation(
     reservation_id = reservation_repository.create(
         cottage_id=1,
         source_id=4,  # BELVILLA
-        check_in=date(2027, 10, 10),
-        check_out=date(2027, 10, 17),
+        check_in=date(2044, 10, 10),
+        check_out=date(2044, 10, 17),
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("2100.00"),
@@ -25,13 +25,13 @@ def test_overall_report_includes_reservation(
         reservation_id
     )
 
-    db_connection.commit()
+
 
     response = api_client.get(
         "/api/overall-report",
         params={
-            "start_date": "2027-10-01",
-            "end_date": "2027-11-01",
+            "start_date": "2044-10-01",
+            "end_date": "2044-11-01",
         },
     )
 

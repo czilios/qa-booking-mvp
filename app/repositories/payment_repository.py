@@ -247,3 +247,37 @@ class PaymentRepository:
             cursor.execute(query, params)
 
             return cursor.fetchall()
+
+    def get_paid_amount_by_reservation_ids(
+    self,
+    reservation_ids: list[int],
+    ):
+        if not reservation_ids:
+            return {}
+
+        placeholders = ", ".join(["%s"] * len(reservation_ids))
+
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+                f"""
+                SELECT
+                    reservation_id,
+                    SUM(
+                        CASE
+                            WHEN status IN ('PAID', 'FORFEITED') THEN amount
+                            WHEN status = 'REFUNDED' THEN -amount
+                            ELSE 0
+                        END
+                    ) AS paid_amount
+                FROM payments
+                WHERE status IN ('PAID', 'FORFEITED', 'REFUNDED')
+                AND reservation_id IN ({placeholders})
+                GROUP BY reservation_id
+                """,
+                reservation_ids,
+        )
+
+        return {
+            row["reservation_id"]: row["paid_amount"]
+            for row in cursor.fetchall()
+        }

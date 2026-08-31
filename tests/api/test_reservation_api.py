@@ -422,7 +422,6 @@ def test_create_reservation_stores_total_amount(
         total_amount=Decimal("2100.00"),
     )
 
-    db_connection.commit()
 
     reservation = repository.get_by_id(reservation_id)
 
