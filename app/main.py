@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 
 
 from app.reservation_service import create_reservation, generate_bank_statement_report, update_reservation
+from app.sales_report_service import generate_sales_report
 from app.payment_service import create_payment, mark_payment_as_paid, generate_payment_report
 from app.reservation_service import cancel_reservation, generate_overall_report, create_historical_reservation
 from app.customer_service import create_customer, get_customer, update_customer
@@ -840,4 +841,21 @@ def create_bank_transaction_ui(
             f"&year={transaction_date.year}"
         ),
         status_code=303,
+    )
+@app.get("/api/sales-report")
+def get_sales_report(
+    start_date: date,
+    end_date: date,
+    db_connection=Depends(get_db_connection),
+):
+    if end_date <= start_date:
+        raise HTTPException(
+            status_code=400,
+            detail="end_date must be after start_date",
+        )
+
+    return generate_sales_report(
+        connection=db_connection,
+        start_date=start_date,
+        end_date=end_date,
     )
