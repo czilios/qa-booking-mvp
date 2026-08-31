@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Raport sprzedaży - Wrzosowo 159
+{% endblock %}
+
+{% block content %}
+
+<div class="container report-container">
+
+    <h1>Wrzosowo 159</h1>
+
+    <h2>Raport sprzedaży</h2>
+
+    <div class="report-summary">
+
+        <div class="report-summary-card">
+
+            <span class="label">
+                Liczba pobytów
+            </span>
+
+            <strong>
+                {{ reservations | length }}
+            </strong>
+
+        </div>
+
+        <div class="report-summary-card">
+
+            <span class="label">
+                Łączna wartość
+            </span>
+
+            <strong>
+                {{ "{:,.2f}".format(total_amount).replace(",", " ").replace(".", ",") }} zł
+            </strong>
+
+        </div>
+
+    </div>
+    {% if reservations %}
+
+        <div class="report-results">
+
+            <h2>Rezerwacje</h2>
+
+            <div class="report-table-wrapper">
+
+                <table class="report-table">
+
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Domek</th>
+                            <th>Źródło</th>
+                            <th>Przyjazd</th>
+                            <th>Wyjazd</th>
+                            <th>Kwota</th>
+                            <th>Zapłacono</th>
+                            <th>Pozostało</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for reservation in reservations %}
+
+                            <tr>
+
+                                <td>
+                                    {{ reservation.id }}
+                                </td>
+
+                                <td>
+                                    {{ reservation.cottage_id }}
+                                </td>
+
+                                <td>
+                                    {{ reservation.source_name }}
+                                </td>
+
+                                <td>
+                                    {{ reservation.check_in }}
+                                </td>
+
+                                <td>
+                                    {{ reservation.check_out }}
+                                </td>
+
+                                <td>
+                                    {{ "{:,.2f}".format(reservation.total_amount).replace(",", " ").replace(".", ",") }} zł
+                                </td>
+                                <td>
+                                    {{ "{:,.2f}".format(reservation.total_amount or 0).replace(",", " ").replace(".", ",") }} zł
+                                </td>
+
+                                <td>
+                                    {{ "{:,.2f}".format(reservation.paid_amount or 0).replace(",", " ").replace(".", ",") }} zł
+                                </td>
+
+                                <td>
+                                    {{ "{:,.2f}".format(reservation.balance or 0).replace(",", " ").replace(".", ",") }} zł
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    {% else %}
+
+        <div class="no-availability">
+            <strong>Brak rezerwacji</strong>
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

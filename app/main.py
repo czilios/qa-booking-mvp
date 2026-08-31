@@ -859,3 +859,40 @@ def get_sales_report(
         start_date=start_date,
         end_date=end_date,
     )
+@app.get("/ui/reports/sales")
+def sales_report_ui(
+    request: Request,
+    month: int,
+    year: int,
+    db_connection=Depends(get_db_connection),
+):
+    if month < 1 or month > 12:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid month",
+        )
+
+    start_date = date(year, month, 1)
+
+    if month == 12:
+        end_date = date(year + 1, 1, 1)
+    else:
+        end_date = date(year, month + 1, 1)
+
+    report = generate_sales_report(
+        connection=db_connection,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+    return templates.TemplateResponse(
+        request=request,
+        name="sales_report.html",
+        context={
+            "month": month,
+            "year": year,
+            "reservations": report["reservations"],
+            "total_amount": report["total_amount"],
+            "by_source": report["by_source"],
+        },
+    )
