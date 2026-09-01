@@ -748,3 +748,36 @@ def test_sales_report_treats_forfeited_payment_as_paid(
 
     assert reservation["paid_amount"] == Decimal("1000.00")
     assert reservation["balance"] == Decimal("0.00")
+
+def test_sales_report_includes_invoice_number(
+    db_connection,
+):
+    repository = ReservationRepository(db_connection)
+
+    reservation_id = repository.create(
+        cottage_id=1,
+        source_id=1,
+        check_in=date(2032, 10, 10),
+        check_out=date(2032, 10, 12),
+        guests_count=2,
+        status="CONFIRMED",
+        total_amount=Decimal("1000.00"),
+        invoice_number="FV/2032/001",
+    )
+
+    db_connection.commit()
+
+    report = generate_sales_report(
+        connection=db_connection,
+        start_date=date(2032, 10, 1),
+        end_date=date(2032, 11, 1),
+    )
+
+    reservation = next(
+        r for r in report["reservations"]
+        if r["id"] == reservation_id
+    )
+
+    assert reservation["invoice_number"] == "FV/2032/001"
+
+

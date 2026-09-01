@@ -173,3 +173,62 @@ def test_sales_report_ui_displays_empty_report(
 
     assert response.status_code == 200
     assert "Brak rezerwacji" in response.text
+
+def test_reservation_stores_invoice_number(
+    db_connection,
+    created_reservation_cleanup,
+):
+    repository = ReservationRepository(db_connection)
+
+    reservation_id = repository.create(
+        cottage_id=1,
+        source_id=1,
+        check_in=date(2032, 10, 10),
+        check_out=date(2032, 10, 12),
+        guests_count=2,
+        status="CONFIRMED",
+        total_amount=Decimal("1000.00"),
+        invoice_number="FV/2032/001",
+    )
+
+    created_reservation_cleanup["reservation_ids"].append(
+        reservation_id
+    )
+
+    reservation = repository.get_by_id(reservation_id)
+
+    assert reservation["invoice_number"] == "FV/2032/001"
+
+def test_sales_report_ui_displays_invoice_number(
+    db_connection,
+    api_client,
+    created_reservation_cleanup,
+):
+    repository = ReservationRepository(db_connection)
+
+    reservation_id = repository.create(
+        cottage_id=1,
+        source_id=1,
+        check_in=date(2032, 10, 10),
+        check_out=date(2032, 10, 12),
+        guests_count=2,
+        status="CONFIRMED",
+        total_amount=Decimal("1000.00"),
+        invoice_number="FV/2032/001",
+    )
+
+    created_reservation_cleanup["reservation_ids"].append(
+        reservation_id
+    )
+
+    response = api_client.get(
+        "/ui/reports/sales",
+        params={
+            "month": 10,
+            "year": 2032,
+        },
+    )
+
+    assert response.status_code == 200
+    assert "FV/2032/001" in response.text
+

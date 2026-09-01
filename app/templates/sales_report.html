@@ -59,6 +59,7 @@
                             <th>Kwota</th>
                             <th>Zapłacono</th>
                             <th>Pozostało</th>
+                            <th>Faktura</th>
                         </tr>
                     </thead>
 
@@ -101,6 +102,9 @@
 
                                 <td>
                                     {{ "{:,.2f}".format(reservation.balance or 0).replace(",", " ").replace(".", ",") }} zł
+                                </td>
+                                <td>
+                                    {{ reservation.invoice_number or "—" }}
                                 </td>
 
                             </tr>

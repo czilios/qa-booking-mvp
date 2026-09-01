@@ -21,6 +21,7 @@ class ReservationRepository:
         accounting_included: bool = False,
         notes: str | None = None,
         commission_amount: Decimal | None = None,
+        invoice_number: str | None = None,
     ) -> int:
         with self.connection.cursor() as cursor:
             cursor.execute(
@@ -37,9 +38,10 @@ class ReservationRepository:
                     total_amount,
                     accounting_included,
                     notes,
-                    commission_amount
+                    commission_amount,
+                    invoice_number
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     cottage_id,
@@ -53,7 +55,8 @@ class ReservationRepository:
                     total_amount,
                     accounting_included,
                     notes,
-                    commission_amount
+                    commission_amount,
+                    invoice_number,
                 ),
             )
 
@@ -76,7 +79,8 @@ class ReservationRepository:
                     total_amount,
                     accounting_included,
                     notes,
-                    commission_amount
+                    commission_amount,
+                    invoice_number
                 FROM reservations
                 WHERE id = %s
                 """,
@@ -265,6 +269,7 @@ class ReservationRepository:
         )
 
         return cursor.fetchall()
+    
     def get_confirmed_reservations_by_check_in_between(
     self,
     start_date: date,
@@ -317,6 +322,7 @@ class ReservationRepository:
                 r.status,
                 r.total_amount,
                 r.accounting_included,
+                r.invoice_number,
                 rs.code AS source_code,
                 rs.name AS source_name,
                 c.phone

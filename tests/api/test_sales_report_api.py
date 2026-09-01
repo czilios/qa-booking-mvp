@@ -334,3 +334,44 @@ def test_sales_report_api_excludes_reservation_outside_date_range(
     }
 
     assert reservation_id not in returned_ids
+
+def test_sales_report_api_includes_invoice_number(
+    db_connection,
+    api_client,
+    created_reservation_cleanup,
+):
+    repository = ReservationRepository(db_connection)
+
+    reservation_id = repository.create(
+        cottage_id=1,
+        source_id=1,
+        check_in=date(2032, 10, 10),
+        check_out=date(2032, 10, 12),
+        guests_count=2,
+        status="CONFIRMED",
+        total_amount=Decimal("1000.00"),
+        invoice_number="FV/2032/001",
+    )
+
+    created_reservation_cleanup["reservation_ids"].append(
+        reservation_id
+    )
+
+    response = api_client.get(
+        "/api/sales-report",
+        params={
+            "start_date": "2032-10-01",
+            "end_date": "2032-11-01",
+        },
+    )
+
+    assert response.status_code == 200
+
+    body = response.json()
+
+    reservation = next(
+        r for r in body["reservations"]
+        if r["id"] == reservation_id
+    )
+
+    assert reservation["invoice_number"] == "FV/2032/001"
