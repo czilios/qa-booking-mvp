@@ -765,3 +765,131 @@ def test_accounting_report_respects_booking_check_in_boundaries(
     assert created_ids[1] in booking_ids
     assert created_ids[2] in booking_ids
     assert created_ids[3] not in booking_ids
+
+def test_accounting_report_excludes_pending_booking(
+    db_connection,
+    created_reservation_cleanup,
+):
+    repository = ReservationRepository(db_connection)
+
+    reservation_id = repository.create(
+        cottage_id=1,
+        source_id=2,  # BOOKING
+        check_in=date(2032, 7, 15),
+        check_out=date(2032, 7, 20),
+        guests_count=2,
+        status="PENDING",
+        total_amount=Decimal("1000.00"),
+        accounting_included=True,
+    )
+
+    created_reservation_cleanup["reservation_ids"].append(
+        reservation_id
+    )
+
+    db_connection.commit()
+
+    report = generate_accounting_report(
+        connection=db_connection,
+        start_date=date(2032, 7, 1),
+        end_date=date(2032, 8, 1),
+    )
+
+    assert not report["booking_reservations"]
+
+def test_accounting_report_excludes_cancelled_booking(
+    db_connection,
+    created_reservation_cleanup,
+):
+    repository = ReservationRepository(db_connection)
+
+    reservation_id = repository.create(
+        cottage_id=1,
+        source_id=2,  # BOOKING
+        check_in=date(2032, 7, 15),
+        check_out=date(2032, 7, 20),
+        guests_count=2,
+        status="CANCELLED",
+        total_amount=Decimal("1000.00"),
+        accounting_included=True,
+    )
+
+    created_reservation_cleanup["reservation_ids"].append(
+        reservation_id
+    )
+
+    db_connection.commit()
+
+    report = generate_accounting_report(
+        connection=db_connection,
+        start_date=date(2032, 7, 1),
+        end_date=date(2032, 8, 1),
+    )
+
+    assert not report["booking_reservations"]
+
+def test_accounting_report_excludes_expired_booking(
+    db_connection,
+    created_reservation_cleanup,
+):
+    repository = ReservationRepository(db_connection)
+
+    reservation_id = repository.create(
+        cottage_id=1,
+        source_id=2,  # BOOKING
+        check_in=date(2032, 6, 15),
+        check_out=date(2032, 6, 20),
+        guests_count=2,
+        status="EXPIRED",
+        total_amount=Decimal("1000.00"),
+        accounting_included=True,
+    )
+
+    created_reservation_cleanup["reservation_ids"].append(
+        reservation_id
+    )
+
+    db_connection.commit()
+
+    report = generate_accounting_report(
+        connection=db_connection,
+        start_date=date(2032, 7, 1),
+        end_date=date(2032, 8, 1),
+    )
+
+    assert not report["booking_reservations"]   
+
+def test_accounting_report_calculates_booking_gross_with_zero_commission(
+    db_connection,
+    created_reservation_cleanup,
+):
+    repository = ReservationRepository(db_connection)
+
+    reservation_id = repository.create(
+        cottage_id=1,
+        source_id=2,  # BOOKING
+        check_in=date(2032, 7, 15),
+        check_out=date(2032, 7, 20),
+        guests_count=2,
+        status="CONFIRMED",
+        total_amount=Decimal("1000.00"),
+        commission_amount=Decimal("0.00"),
+        accounting_included=True,
+    )
+
+    created_reservation_cleanup["reservation_ids"].append(
+        reservation_id
+    )
+
+    db_connection.commit()
+
+    report = generate_accounting_report(
+        connection=db_connection,
+        start_date=date(2032, 7, 1),
+        end_date=date(2032, 8, 1),
+    )
+
+    booking = report["booking_reservations"][0]
+
+    assert booking["gross_amount"] == Decimal("1000.00")
+
