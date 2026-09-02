@@ -862,8 +862,8 @@ def get_sales_report(
 @app.get("/ui/reports/sales")
 def sales_report_ui(
     request: Request,
-    month: int,
-    year: int,
+    month: int = 7,
+    year: int = 2026,
     db_connection=Depends(get_db_connection),
 ):
     if month < 1 or month > 12:

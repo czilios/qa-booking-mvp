@@ -209,3 +209,35 @@ class BankTransactionRepository:
             )
 
         return cursor.fetchone()["total"]
+
+def list_by_source_and_date_range(
+    self,
+    source_id: int,
+    start_date: date,
+    end_date: date,
+):
+    with self.connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT
+                id,
+                transaction_date,
+                source_id,
+                cottage_id,
+                amount,
+                description,
+                notes
+            FROM bank_transactions
+            WHERE source_id = %s
+              AND transaction_date >= %s
+              AND transaction_date < %s
+            ORDER BY transaction_date, id
+            """,
+            (
+                source_id,
+                start_date,
+                end_date,
+            ),
+        )
+
+        return cursor.fetchall()

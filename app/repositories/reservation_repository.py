@@ -321,6 +321,7 @@ class ReservationRepository:
                 r.guests_count,
                 r.status,
                 r.total_amount,
+                r.commission_amount,
                 r.accounting_included,
                 r.invoice_number,
                 rs.code AS source_code,
@@ -334,6 +335,50 @@ class ReservationRepository:
             WHERE r.status = 'CONFIRMED'
             AND r.check_in >= %s
             AND r.check_in < %s
+            ORDER BY r.check_in, r.id
+            """,
+            (
+                start_date,
+                end_date,
+            ),
+        )
+
+        return cursor.fetchall()
+
+    def get_accounting_booking_reservations_by_check_in_between(
+    self,
+    start_date: date,
+    end_date: date,
+    ):
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+            """
+            SELECT
+                r.id,
+                r.cottage_id,
+                r.customer_id,
+                r.source_id,
+                r.check_in,
+                r.check_out,
+                r.guests_count,
+                r.status,
+                r.total_amount,
+                r.commission_amount,
+                r.accounting_included,
+                r.invoice_number,
+                rs.code AS source_code,
+                rs.name AS source_name,
+                c.phone
+            FROM reservations r
+            JOIN reservation_sources rs
+                ON rs.id = r.source_id
+            LEFT JOIN customers c
+                ON c.id = r.customer_id
+            WHERE r.status = 'CONFIRMED'
+              AND r.source_id = 2
+              AND r.accounting_included = TRUE
+              AND r.check_in >= %s
+              AND r.check_in < %s
             ORDER BY r.check_in, r.id
             """,
             (
