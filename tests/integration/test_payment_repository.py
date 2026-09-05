@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from app.repositories.payment_repository import PaymentRepository
 from app.repositories.reservation_repository import ReservationRepository
+from app.repositories.bank_transaction_repository import BankTransactionRepository
 
 def test_payment_repository_creates_payment(db_connection):
     reservation_repository = ReservationRepository(db_connection)
@@ -244,3 +245,64 @@ def test_get_paid_payments_for_month_excludes_other_months(
     )
 
     assert len(payments) == 0
+
+def test_create_payment_stores_invoice(
+    db_connection,
+):
+    reservation_repository = ReservationRepository(db_connection)
+    payment_repository = PaymentRepository(db_connection)
+
+    reservation_id = reservation_repository.create(
+        cottage_id=1,
+        source_id=1,
+        check_in=date(2026, 9, 1),
+        check_out=date(2026, 9, 7),
+        guests_count=2,
+        status="CONFIRMED",
+    )
+
+    payment_id = payment_repository.create_payment(
+        reservation_id=reservation_id,
+        payment_type="DEPOSIT",
+        amount=Decimal("1700.00"),
+        invoice=True,
+    )
+
+    payment = payment_repository.get_payment_by_id(payment_id)
+
+    assert payment["invoice"] == 1
+
+def test_create_payment_stores_bank_transaction_id(
+    db_connection,
+):
+    reservation_repository = ReservationRepository(db_connection)
+    payment_repository = PaymentRepository(db_connection)
+    bank_transaction_repository = BankTransactionRepository(db_connection)
+
+    reservation_id = reservation_repository.create(
+        cottage_id=1,
+        source_id=1,
+        check_in=date(2026, 8, 3),
+        check_out=date(2026, 8, 9),
+        guests_count=2,
+        total_amount=Decimal("1700.00"),
+    )
+
+    bank_transaction_id = bank_transaction_repository.create(
+        transaction_date=date(2026, 7, 7),
+        source_id=1,
+        cottage_id=1,
+        amount=Decimal("1700.00"),
+    )
+
+    payment_id = payment_repository.create_payment(
+        reservation_id=reservation_id,
+        payment_type="DEPOSIT",
+        amount=Decimal("1700.00"),
+        invoice=True,
+        bank_transaction_id=bank_transaction_id,
+    )
+
+    payment = payment_repository.get_payment_by_id(payment_id)
+
+    assert payment["bank_transaction_id"] == bank_transaction_id

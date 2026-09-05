@@ -893,3 +893,5 @@ def test_accounting_report_calculates_booking_gross_with_zero_commission(
 
     assert booking["gross_amount"] == Decimal("1000.00")
 
+
+

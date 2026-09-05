@@ -8,18 +8,20 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 from httpx2 import request
 from pydantic import BaseModel, Field
+import calendar
 
 
 from app.reservation_service import create_reservation, generate_bank_statement_report, update_reservation
-from app.sales_report_service import generate_sales_report
+
 from app.payment_service import create_payment, mark_payment_as_paid, generate_payment_report
 from app.reservation_service import cancel_reservation, generate_overall_report, create_historical_reservation
 from app.customer_service import create_customer, get_customer, update_customer
 from app.availability_service import AvailabilityService
 from app.bank_statement_service import BankStatementReportService
-from app.overall_report_service import generate_overall_report
 from app.bank_transaction_service import list_bank_transactions, sum_bank_transactions,create_bank_transaction
-
+from app.overall_report_service import generate_overall_report
+from app.accounting_report_service import generate_accounting_report
+from app.sales_report_service import generate_sales_report
 from app.repositories.bank_transaction_repository import BankTransactionRepository
 from app.repositories.block_repository import BlockRepository
 from app.repositories.cottage_repository import CottageRepository
@@ -96,6 +98,35 @@ def get_reservation_repository(
 ):
     return ReservationRepository(db_connection)
 
+MONTH_NAMES_PL = {
+    1: "Styczeń",
+    2: "Luty",
+    3: "Marzec",
+    4: "Kwiecień",
+    5: "Maj",
+    6: "Czerwiec",
+    7: "Lipiec",
+    8: "Sierpień",
+    9: "Wrzesień",
+    10: "Październik",
+    11: "Listopad",
+    12: "Grudzień",
+}
+
+MONTH_NAMES_PL_GENITIVE = {
+    1: "stycznia",
+    2: "lutego",
+    3: "marca",
+    4: "kwietnia",
+    5: "maja",
+    6: "czerwca",
+    7: "lipca",
+    8: "sierpnia",
+    9: "września",
+    10: "października",
+    11: "listopada",
+    12: "grudnia",
+}
 
 @app.get("/")
 def read_root():
@@ -895,4 +926,48 @@ def sales_report_ui(
             "total_amount": report["total_amount"],
             "by_source": report["by_source"],
         },
+    )
+
+@app.get("/ui/reports/accounting")
+def accounting_report_ui(
+    request: Request,
+    month: int = 7,
+    year: int = 2026,
+    db_connection=Depends(get_db_connection),
+):
+    if month < 1 or month > 12:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid month",
+        )
+
+    start_date = date(year, month, 1)
+
+    if month == 12:
+        end_date = date(year + 1, 1, 1)
+    else:
+        end_date = date(year, month + 1, 1)
+
+    report = generate_accounting_report(
+        connection=db_connection,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+    return templates.TemplateResponse(
+        request=request,
+        name="accounting_report.html",
+            context={
+                "month": month,
+                "year": year,
+                "month_name": MONTH_NAMES_PL[month],
+                "month_name_genitive": MONTH_NAMES_PL_GENITIVE[month],
+                "transactions": report["transactions"],
+                "booking_reservations": report["booking_reservations"],
+                "total_gross": report["total_gross"],
+                "total_net": report["total_net"],
+                "total_vat": report["total_vat"],
+                "carry_amount": Decimal("0.00"),
+                "grand_total": report["total_gross"],
+            },
     )

@@ -10,6 +10,17 @@ from app.repositories.reservation_repository import ReservationRepository
 DIRECT_SOURCE_ID = 1
 VAT_RATE = Decimal("0.08")
 
+def calculate_vat_values(gross_amount: Decimal):
+    net_amount = (
+        gross_amount / (Decimal("1.00") + VAT_RATE)
+    ).quantize(Decimal("0.01"))
+
+    vat_amount = (
+        gross_amount - net_amount
+    ).quantize(Decimal("0.01"))
+
+    return net_amount, vat_amount
+
 
 def generate_accounting_report(
     connection,
@@ -30,36 +41,47 @@ def generate_accounting_report(
         if transaction["source_id"] == DIRECT_SOURCE_ID
     ]
 
+    for transaction in direct_transactions:
+        transaction["gross_amount"] = transaction["amount"]
+
+        (
+            transaction["net_amount"],
+            transaction["vat_amount"],
+        ) = calculate_vat_values(
+            transaction["gross_amount"]
+        )
+        
     booking_reservations = reservation_repository.get_accounting_booking_reservations_by_check_in_between(
         start_date=start_date,
         end_date=end_date,
         )
     for booking in booking_reservations:
-            booking["gross_amount"] = (
-                booking["total_amount"] or Decimal("0.00")
-            ) + (
-                booking["commission_amount"] or Decimal("0.00")
+        booking["gross_amount"] = (
+            booking["total_amount"] or Decimal("0.00")
+        ) + (
+            booking["commission_amount"] or Decimal("0.00")
+        )
+
+        (
+            booking["net_amount"],
+            booking["vat_amount"],
+        ) = calculate_vat_values(
+            booking["gross_amount"]
+        )
+
+    total_gross = (
+            sum(
+                (transaction["gross_amount"] for transaction in direct_transactions),
+                Decimal("0.00"),
             )
-    direct_gross = sum(
-    (transaction["amount"] for transaction in direct_transactions),
-    Decimal("0.00")
-)
+            + sum(
+                (booking["gross_amount"] for booking in booking_reservations),
+                Decimal("0.00"),
+            )
+        )
 
-    booking_gross = sum(
-        (booking["gross_amount"] for booking in booking_reservations),
-        Decimal("0.00")
-    )
-
-    total_gross = direct_gross + booking_gross
-
-    total_net = (
-        total_gross / (Decimal("1.00") + VAT_RATE)
-    ).quantize(Decimal("0.01"))
-
-    total_vat = (
-        total_gross - total_net
-    ).quantize(Decimal("0.01"))
-
+    total_net, total_vat = calculate_vat_values(total_gross)
+            
     return {
         "transactions": direct_transactions,
         "booking_reservations": booking_reservations,

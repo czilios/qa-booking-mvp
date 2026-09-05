@@ -15,6 +15,8 @@ class PaymentRepository:
         amount: Decimal,
         status: str = "UNPAID",
         due_at: datetime | None = None,
+        invoice: bool | None = None,
+        bank_transaction_id: int | None = None,
     ) -> int:
         with self.connection.cursor() as cursor:
             cursor.execute(
@@ -24,9 +26,11 @@ class PaymentRepository:
                     type,
                     amount,
                     status,
-                    due_at
+                    due_at,
+                    invoice,
+                    bank_transaction_id
                 )
-                VALUES (%s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     reservation_id,
@@ -34,8 +38,12 @@ class PaymentRepository:
                     amount,
                     status,
                     due_at,
+                    invoice,
+                    bank_transaction_id,
+                    
                 ),
             )
+        
 
             return cursor.lastrowid
 
@@ -50,7 +58,9 @@ class PaymentRepository:
                     amount,
                     status,
                     due_at,
-                    paid_at
+                    paid_at,
+                    invoice,
+                    bank_transaction_id
                 FROM payments
                 WHERE id = %s
                 """,
@@ -281,3 +291,5 @@ class PaymentRepository:
             row["reservation_id"]: row["paid_amount"]
             for row in cursor.fetchall()
         }
+
+

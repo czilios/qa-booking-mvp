@@ -232,3 +232,4 @@ def test_sales_report_ui_displays_invoice_number(
     assert response.status_code == 200
     assert "FV/2032/001" in response.text
 
+
