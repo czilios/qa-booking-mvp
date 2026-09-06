@@ -25,26 +25,15 @@
             </thead>
 
             <tbody>
-                {% for transaction in report.transactions %}
-                    <tr>
-                        <td>{{ transaction.transaction_date }}</td>
-                        <td>Direct</td>
-                        <td>{{ transaction.gross_amount }}</td>
-                        <td>{{ transaction.net_amount }}</td>
-                        <td>{{ transaction.vat_amount }}</td>
-                        <td>{{ transaction.description or "" }}</td>
-                    </tr>
-                {% endfor %}
-
-                {% for booking in report.booking_reservations %}
-                    <tr>
-                        <td>{{ booking.check_in }}</td>
-                        <td>Booking</td>
-                        <td>{{ booking.gross_amount }}</td>
-                        <td>{{ booking.net_amount }}</td>
-                        <td>{{ booking.vat_amount }}</td>
-                        <td>Rezerwacja #{{ booking.id }}</td>
-                    </tr>
+               {% for entry in report.entries %}
+                <tr>
+                    <td>{{ entry.date }}</td>
+                    <td>{{ entry.source }}</td>
+                    <td>{{ entry.gross_amount }}</td>
+                    <td>{{ entry.net_amount }}</td>
+                    <td>{{ entry.vat_amount }}</td>
+                    <td></td>
+                </tr>
                 {% endfor %}
             </tbody>
         </table>

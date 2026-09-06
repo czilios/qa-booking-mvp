@@ -70,6 +70,7 @@ def generate_accounting_report(
         for transaction in transactions
         if transaction["source_id"] == DIRECT_SOURCE_ID
     ]
+    entries = []
 
     for transaction in direct_transactions:
         transaction["gross_amount"] = transaction["amount"]
@@ -80,6 +81,15 @@ def generate_accounting_report(
         ) = calculate_vat_values(
             transaction["gross_amount"]
         )
+
+        entries.append({
+            "date": transaction["transaction_date"],
+            "source": "Direct",
+            "transaction_id": transaction["id"],
+            "gross_amount": transaction["gross_amount"],
+            "net_amount": transaction["net_amount"],
+            "vat_amount": transaction["vat_amount"],
+        })
         
     booking_reservations = reservation_repository.get_accounting_booking_reservations_by_check_in_between(
         start_date=start_date,
@@ -99,6 +109,16 @@ def generate_accounting_report(
             booking["gross_amount"]
         )
 
+        entries.append({
+            "date": booking["check_in"],
+            "source": "Booking",
+            "reservation_id": booking["id"],
+            "gross_amount": booking["gross_amount"],
+            "net_amount": booking["net_amount"],
+            "vat_amount": booking["vat_amount"],
+        })
+    entries.sort(key=lambda entry: entry["date"])
+
     total_gross = (
             sum(
                 (transaction["gross_amount"] for transaction in direct_transactions),
@@ -115,6 +135,7 @@ def generate_accounting_report(
     return {
         "transactions": direct_transactions,
         "booking_reservations": booking_reservations,
+        "entries": entries,
         "total_gross": total_gross,
         "total_net": total_net,
         "total_vat": total_vat,

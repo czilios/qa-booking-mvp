@@ -779,5 +779,61 @@ def test_sales_report_includes_invoice_number(
     )
 
     assert reservation["invoice_number"] == "FV/2032/001"
+def test_sales_report_sorts_reservations_by_check_in_date_regardless_of_source(
+    db_connection,
+    created_reservation_cleanup,
+):
+    repository = ReservationRepository(db_connection)
 
+    direct_id = repository.create(
+        cottage_id=1,
+        source_id=1,  # DIRECT
+        check_in=date(2028, 11, 10),
+        check_out=date(2028, 11, 15),
+        guests_count=2,
+        status="CONFIRMED",
+        total_amount=Decimal("1000.00"),
+    )
+
+    booking_id = repository.create(
+        cottage_id=2,
+        source_id=2,  # BOOKING
+        check_in=date(2028, 11, 5),
+        check_out=date(2028, 11, 10),
+        guests_count=2,
+        status="CONFIRMED",
+        total_amount=Decimal("1500.00"),
+    )
+
+    belvilla_id = repository.create(
+        cottage_id=3,
+        source_id=4,  # BELVILLA
+        check_in=date(2028, 11, 20),
+        check_out=date(2028, 11, 25),
+        guests_count=2,
+        status="CONFIRMED",
+        total_amount=Decimal("2000.00"),
+    )
+
+    created_reservation_cleanup["reservation_ids"].extend(
+        [
+            direct_id,
+            booking_id,
+            belvilla_id,
+        ]
+    )
+
+    report = generate_sales_report(
+        db_connection,
+        start_date=date(2028, 11, 1),
+        end_date=date(2028, 12, 1),
+    )
+
+    reservation_ids = [
+        reservation["id"]
+        for reservation in report["reservations"]
+    ]
+
+    assert reservation_ids.index(booking_id) < reservation_ids.index(direct_id)
+    assert reservation_ids.index(direct_id) < reservation_ids.index(belvilla_id)
 

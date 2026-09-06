@@ -17,7 +17,7 @@ def test_accounting_report_calculates_direct_income(
     repository = BankTransactionRepository(db_connection)
 
     transaction_id = repository.create(
-        transaction_date=date(2032, 7, 15),
+        transaction_date=date(2044, 7, 15),
         source_id=1,  # DIRECT
         cottage_id=1,
         amount=Decimal("1080.00"),
@@ -29,8 +29,8 @@ def test_accounting_report_calculates_direct_income(
 
     report = generate_accounting_report(
         connection=db_connection,
-        start_date=date(2032, 7, 1),
-        end_date=date(2032, 8, 1),
+        start_date=date(2044, 7, 1),
+        end_date=date(2044, 8, 1),
     )
 
     assert report["total_gross"] == Decimal("1080.00")
@@ -44,10 +44,10 @@ def test_accounting_report_respects_date_boundaries(
     repository = BankTransactionRepository(db_connection)
 
     transactions = [
-        (date(2032, 6, 30), Decimal("100.00")),
-        (date(2032, 7, 1), Decimal("200.00")),
-        (date(2032, 7, 31), Decimal("300.00")),
-        (date(2032, 8, 1), Decimal("400.00")),
+        (date(2044, 6, 30), Decimal("100.00")),
+        (date(2044, 7, 1), Decimal("200.00")),
+        (date(2044, 7, 31), Decimal("300.00")),
+        (date(2044, 8, 1), Decimal("400.00")),
     ]
 
     created_ids = []
@@ -67,8 +67,8 @@ def test_accounting_report_respects_date_boundaries(
 
     report = generate_accounting_report(
         connection=db_connection,
-        start_date=date(2032, 7, 1),
-        end_date=date(2032, 8, 1),
+        start_date=date(2044, 7, 1),
+        end_date=date(2044, 8, 1),
     )
 
     assert report["total_gross"] == Decimal("500.00")
@@ -82,9 +82,9 @@ def test_accounting_report_includes_only_direct_bank_transactions(
     repository = BankTransactionRepository(db_connection)
 
     transactions = [
-        (date(2032, 7, 10), 1, Decimal("1080.00")),
-        (date(2032, 7, 11), 2, Decimal("850.00")),
-        (date(2032, 7, 12), 4, Decimal("1200.00")),
+        (date(2044, 7, 10), 1, Decimal("1080.00")),
+        (date(2044, 7, 11), 2, Decimal("850.00")),
+        (date(2044, 7, 12), 4, Decimal("1200.00")),
     ]
 
     created_ids = []
@@ -105,8 +105,8 @@ def test_accounting_report_includes_only_direct_bank_transactions(
 
     report = generate_accounting_report(
         connection=db_connection,
-        start_date=date(2032, 7, 1),
-        end_date=date(2032, 8, 1),
+        start_date=date(2044, 7, 1),
+        end_date=date(2044, 8, 1),
     )
 
     assert report["total_gross"] == Decimal("1080.00")
@@ -126,8 +126,8 @@ def test_accounting_report_includes_confirmed_booking_by_check_in(
     reservation_id = repository.create(
         cottage_id=1,
         source_id=2,  # BOOKING
-        check_in=date(2032, 7, 15),
-        check_out=date(2032, 7, 22),
+        check_in=date(2044, 7, 15),
+        check_out=date(2044, 7, 22),
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
@@ -142,8 +142,8 @@ def test_accounting_report_includes_confirmed_booking_by_check_in(
 
     report = generate_accounting_report(
         connection=db_connection,
-        start_date=date(2032, 7, 1),
-        end_date=date(2032, 8, 1),
+        start_date=date(2044, 7, 1),
+        end_date=date(2044, 8, 1),
     )
 
     assert len(report["booking_reservations"]) == 1
@@ -162,8 +162,8 @@ def test_accounting_report_isolates_booking_from_direct_and_belvilla(
     booking_id = repository.create(
         cottage_id=1,
         source_id=2,  # BOOKING
-        check_in=date(2032, 7, 10),
-        check_out=date(2032, 7, 15),
+        check_in=date(2044, 7, 10),
+        check_out=date(2044, 7, 15),
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
@@ -173,8 +173,8 @@ def test_accounting_report_isolates_booking_from_direct_and_belvilla(
     direct_id = repository.create(
         cottage_id=2,
         source_id=1,  # DIRECT
-        check_in=date(2032, 7, 11),
-        check_out=date(2032, 7, 16),
+        check_in=date(2044, 7, 11),
+        check_out=date(2044, 7, 16),
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("2000.00"),
@@ -183,8 +183,8 @@ def test_accounting_report_isolates_booking_from_direct_and_belvilla(
     belvilla_id = repository.create(
         cottage_id=3,
         source_id=4,  # BELVILLA
-        check_in=date(2032, 7, 12),
-        check_out=date(2032, 7, 17),
+        check_in=date(2044, 7, 12),
+        check_out=date(2044, 7, 17),
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("3000.00"),
@@ -202,8 +202,8 @@ def test_accounting_report_isolates_booking_from_direct_and_belvilla(
 
     report = generate_accounting_report(
         connection=db_connection,
-        start_date=date(2032, 7, 1),
-        end_date=date(2032, 8, 1),
+        start_date=date(2044, 7, 1),
+        end_date=date(2044, 8, 1),
     )
 
     booking_ids = {
@@ -224,8 +224,8 @@ def test_accounting_report_calculates_booking_gross_with_commission(
     reservation_id = repository.create(
         cottage_id=1,
         source_id=2,  # BOOKING
-        check_in=date(2032, 7, 15),
-        check_out=date(2032, 7, 20),
+        check_in=date(2044, 7, 15),
+        check_out=date(2044, 7, 20),
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("850.00"),
@@ -241,8 +241,8 @@ def test_accounting_report_calculates_booking_gross_with_commission(
 
     report = generate_accounting_report(
         connection=db_connection,
-        start_date=date(2032, 7, 1),
-        end_date=date(2032, 8, 1),
+        start_date=date(2044, 7, 1),
+        end_date=date(2044, 8, 1),
     )
 
     booking = report["booking_reservations"][0]
@@ -261,8 +261,8 @@ def test_accounting_report_calculates_booking_gross_without_commission(
     reservation_id = repository.create(
         cottage_id=1,
         source_id=2,  # BOOKING
-        check_in=date(2032, 7, 15),
-        check_out=date(2032, 7, 20),
+        check_in=date(2044, 7, 15),
+        check_out=date(2044, 7, 20),
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
@@ -277,8 +277,8 @@ def test_accounting_report_calculates_booking_gross_without_commission(
 
     report = generate_accounting_report(
         connection=db_connection,
-        start_date=date(2032, 7, 1),
-        end_date=date(2032, 8, 1),
+        start_date=date(2044, 7, 1),
+        end_date=date(2044, 8, 1),
     )
 
     booking = report["booking_reservations"][0]
@@ -297,8 +297,8 @@ def test_accounting_report_includes_booking_gross_in_total(
     reservation_id = repository.create(
         cottage_id=1,
         source_id=2,  # BOOKING
-        check_in=date(2032, 7, 15),
-        check_out=date(2032, 7, 20),
+        check_in=date(2044, 7, 15),
+        check_out=date(2044, 7, 20),
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("850.00"),
@@ -311,8 +311,8 @@ def test_accounting_report_includes_booking_gross_in_total(
 
     report = generate_accounting_report(
         connection=db_connection,
-        start_date=date(2032, 7, 1),
-        end_date=date(2032, 8, 1),
+        start_date=date(2044, 7, 1),
+        end_date=date(2044, 8, 1),
     )
 
     assert report["total_gross"] == Decimal("1000.00")
@@ -326,8 +326,8 @@ def test_accounting_report_calculates_net_and_vat_from_booking_gross(
     reservation_id = repository.create(
         cottage_id=1,
         source_id=2,  # BOOKING
-        check_in=date(2032, 7, 15),
-        check_out=date(2032, 7, 20),
+        check_in=date(2044, 7, 15),
+        check_out=date(2044, 7, 20),
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("850.00"),
@@ -340,8 +340,8 @@ def test_accounting_report_calculates_net_and_vat_from_booking_gross(
 
     report = generate_accounting_report(
         connection=db_connection,
-        start_date=date(2032, 7, 1),
-        end_date=date(2032, 8, 1),
+        start_date=date(2044, 7, 1),
+        end_date=date(2044, 8, 1),
     )
 
     assert report["total_gross"] == Decimal("1000.00")
@@ -357,8 +357,8 @@ def test_accounting_report_excludes_booking_outside_period(
     reservation_id = repository.create(
         cottage_id=1,
         source_id=2,  # BOOKING
-        check_in=date(2032, 8, 1),
-        check_out=date(2032, 8, 5),
+        check_in=date(2044, 8, 1),
+        check_out=date(2044, 8, 5),
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
@@ -374,8 +374,8 @@ def test_accounting_report_excludes_booking_outside_period(
 
     report = generate_accounting_report(
         connection=db_connection,
-        start_date=date(2032, 7, 1),
-        end_date=date(2032, 8, 1),
+        start_date=date(2044, 7, 1),
+        end_date=date(2044, 8, 1),
     )
 
     assert not report["booking_reservations"]
@@ -389,8 +389,8 @@ def test_accounting_report_excludes_CANCELLED_reservations(
     reservation_id = repository.create(
         cottage_id=1,
         source_id=2,  # BOOKING
-        check_in=date(2032, 7, 15),
-        check_out=date(2032, 7, 20),
+        check_in=date(2044, 7, 15),
+        check_out=date(2044, 7, 20),
         guests_count=2,
         status="CANCELLED",
         total_amount=Decimal("1000.00"),
@@ -406,8 +406,8 @@ def test_accounting_report_excludes_CANCELLED_reservations(
 
     report = generate_accounting_report(
         connection=db_connection,
-        start_date=date(2032, 7, 1),
-        end_date=date(2032, 8, 1),
+        start_date=date(2044, 7, 1),
+        end_date=date(2044, 8, 1),
     )
 
     assert not report["booking_reservations"]
@@ -421,8 +421,8 @@ def test_accounting_report_excludes_non_accounting_reservations(
     reservation_id = repository.create(
         cottage_id=1,
         source_id=2,  # BOOKING
-        check_in=date(2032, 7, 15),
-        check_out=date(2032, 7, 20),
+        check_in=date(2044, 7, 15),
+        check_out=date(2044, 7, 20),
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
@@ -438,8 +438,8 @@ def test_accounting_report_excludes_non_accounting_reservations(
 
     report = generate_accounting_report(
         connection=db_connection,
-        start_date=date(2032, 7, 1),
-        end_date=date(2032, 8, 1),
+        start_date=date(2044, 7, 1),
+        end_date=date(2044, 8, 1),
     )
 
     assert not report["booking_reservations"]
@@ -453,8 +453,8 @@ def test_accounting_report_excludes_direct_non_accounting_reservation(
     reservation_id = repository.create(
         cottage_id=1,
         source_id=1,  # DIRECT
-        check_in=date(2032, 7, 15),
-        check_out=date(2032, 7, 20),
+        check_in=date(2044, 7, 15),
+        check_out=date(2044, 7, 20),
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
@@ -469,8 +469,8 @@ def test_accounting_report_excludes_direct_non_accounting_reservation(
 
     report = generate_accounting_report(
         connection=db_connection,
-        start_date=date(2032, 7, 1),
-        end_date=date(2032, 8, 1),
+        start_date=date(2044, 7, 1),
+        end_date=date(2044, 8, 1),
     )
 
     assert not any(
@@ -486,8 +486,8 @@ def test_accounting_report_excludes_confirmed_belvilla_even_if_accounting_includ
     reservation_id = repository.create(
         cottage_id=1,
         source_id=4,  # BELVILLA
-        check_in=date(2032, 7, 15),
-        check_out=date(2032, 7, 20),
+        check_in=date(2044, 7, 15),
+        check_out=date(2044, 7, 20),
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
@@ -503,8 +503,8 @@ def test_accounting_report_excludes_confirmed_belvilla_even_if_accounting_includ
 
     report = generate_accounting_report(
         connection=db_connection,
-        start_date=date(2032, 7, 1),
-        end_date=date(2032, 8, 1),
+        start_date=date(2044, 7, 1),
+        end_date=date(2044, 8, 1),
     )
 
     assert not any(
@@ -520,7 +520,7 @@ def test_accounting_report_total_gross_includes_direct_and_booking(
     reservation_repository = ReservationRepository(db_connection)
 
     transaction_id = bank_transaction_repository.create(
-    transaction_date=date(2032, 7, 15),
+    transaction_date=date(2044, 7, 15),
     source_id=1,
     cottage_id=1,
     amount=Decimal("500.00"),
@@ -532,8 +532,8 @@ def test_accounting_report_total_gross_includes_direct_and_booking(
     reservation_id = reservation_repository.create(
         cottage_id=1,
         source_id=2,  # BOOKING
-        check_in=date(2032, 7, 15),
-        check_out=date(2032, 7, 20),
+        check_in=date(2044, 7, 15),
+        check_out=date(2044, 7, 20),
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("850.00"),
@@ -549,8 +549,8 @@ def test_accounting_report_total_gross_includes_direct_and_booking(
 
     report = generate_accounting_report(
         connection=db_connection,
-        start_date=date(2032, 7, 1),
-        end_date=date(2032, 8, 1),
+        start_date=date(2044, 7, 1),
+        end_date=date(2044, 8, 1),
     )
     for booking in report["booking_reservations"]:
         print(
@@ -576,8 +576,8 @@ def test_accounting_report_includes_direct_bank_transaction_even_if_reservation_
     reservation_id = reservation_repository.create(
         cottage_id=1,
         source_id=1,  # DIRECT
-        check_in=date(2032, 7, 15),
-        check_out=date(2032, 7, 20),
+        check_in=date(2044, 7, 15),
+        check_out=date(2044, 7, 20),
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
@@ -589,7 +589,7 @@ def test_accounting_report_includes_direct_bank_transaction_even_if_reservation_
     )
 
     transaction_id = bank_transaction_repository.create(
-        transaction_date=date(2032, 7, 15),
+        transaction_date=date(2044, 7, 15),
         source_id=1,  # DIRECT
         cottage_id=1,
         amount=Decimal("1080.00"),
@@ -601,8 +601,8 @@ def test_accounting_report_includes_direct_bank_transaction_even_if_reservation_
 
     report = generate_accounting_report(
         connection=db_connection,
-        start_date=date(2032, 7, 1),
-        end_date=date(2032, 8, 1),
+        start_date=date(2044, 7, 1),
+        end_date=date(2044, 8, 1),
     )
 
     assert report["total_gross"] == Decimal("1080.00")
@@ -621,7 +621,7 @@ def test_accounting_report_sums_multiple_direct_bank_transactions(
         Decimal("1080.00"),
     ):
         transaction_id = repository.create(
-            transaction_date=date(2032, 7, 15),
+            transaction_date=date(2044, 7, 15),
             source_id=1,  # DIRECT
             cottage_id=1,
             amount=amount,
@@ -634,8 +634,8 @@ def test_accounting_report_sums_multiple_direct_bank_transactions(
 
     report = generate_accounting_report(
         connection=db_connection,
-        start_date=date(2032, 7, 1),
-        end_date=date(2032, 8, 1),
+        start_date=date(2044, 7, 1),
+        end_date=date(2044, 8, 1),
     )
 
     assert report["total_gross"] == Decimal("2330.00")
@@ -657,7 +657,7 @@ def test_accounting_report_sums_multiple_direct_and_booking_transactions(
 
     for amount in direct_amounts:
         transaction_id = bank_transaction_repository.create(
-            transaction_date=date(2032, 7, 15),
+            transaction_date=date(2044, 7, 15),
             source_id=1,  # DIRECT
             cottage_id=1,
             amount=amount,
@@ -677,8 +677,8 @@ def test_accounting_report_sums_multiple_direct_and_booking_transactions(
         reservation_id = reservation_repository.create(
             cottage_id=1,
             source_id=2,  # BOOKING
-            check_in=date(2032, 7, 15),
-            check_out=date(2032, 7, 20),
+            check_in=date(2044, 7, 15),
+            check_out=date(2044, 7, 20),
             guests_count=2,
             status="CONFIRMED",
             total_amount=total_amount,
@@ -693,8 +693,8 @@ def test_accounting_report_sums_multiple_direct_and_booking_transactions(
 
     report = generate_accounting_report(
         connection=db_connection,
-        start_date=date(2032, 7, 1),
-        end_date=date(2032, 8, 1),
+        start_date=date(2044, 7, 1),
+        end_date=date(2044, 8, 1),
     )
 
     # Direct: 500 + 750 = 1250
@@ -724,10 +724,10 @@ def test_accounting_report_respects_booking_check_in_boundaries(
     repository = ReservationRepository(db_connection)
 
     reservations = [
-        (date(2032, 6, 30), date(2032, 7, 2), Decimal("1000.00")),
-        (date(2032, 7, 1), date(2032, 7, 3), Decimal("1100.00")),
-        (date(2032, 7, 31), date(2032, 8, 2), Decimal("1200.00")),
-        (date(2032, 8, 1), date(2032, 8, 3), Decimal("1300.00")),
+        (date(2044, 6, 30), date(2044, 7, 2), Decimal("1000.00")),
+        (date(2044, 7, 1), date(2044, 7, 3), Decimal("1100.00")),
+        (date(2044, 7, 31), date(2044, 8, 2), Decimal("1200.00")),
+        (date(2044, 8, 1), date(2044, 8, 3), Decimal("1300.00")),
     ]
 
     created_ids = []
@@ -752,8 +752,8 @@ def test_accounting_report_respects_booking_check_in_boundaries(
 
     report = generate_accounting_report(
         connection=db_connection,
-        start_date=date(2032, 7, 1),
-        end_date=date(2032, 8, 1),
+        start_date=date(2044, 7, 1),
+        end_date=date(2044, 8, 1),
     )
 
     booking_ids = {
@@ -775,8 +775,8 @@ def test_accounting_report_excludes_pending_booking(
     reservation_id = repository.create(
         cottage_id=1,
         source_id=2,  # BOOKING
-        check_in=date(2032, 7, 15),
-        check_out=date(2032, 7, 20),
+        check_in=date(2044, 7, 15),
+        check_out=date(2044, 7, 20),
         guests_count=2,
         status="PENDING",
         total_amount=Decimal("1000.00"),
@@ -791,8 +791,8 @@ def test_accounting_report_excludes_pending_booking(
 
     report = generate_accounting_report(
         connection=db_connection,
-        start_date=date(2032, 7, 1),
-        end_date=date(2032, 8, 1),
+        start_date=date(2044, 7, 1),
+        end_date=date(2044, 8, 1),
     )
 
     assert not report["booking_reservations"]
@@ -806,8 +806,8 @@ def test_accounting_report_excludes_cancelled_booking(
     reservation_id = repository.create(
         cottage_id=1,
         source_id=2,  # BOOKING
-        check_in=date(2032, 7, 15),
-        check_out=date(2032, 7, 20),
+        check_in=date(2044, 7, 15),
+        check_out=date(2044, 7, 20),
         guests_count=2,
         status="CANCELLED",
         total_amount=Decimal("1000.00"),
@@ -822,8 +822,8 @@ def test_accounting_report_excludes_cancelled_booking(
 
     report = generate_accounting_report(
         connection=db_connection,
-        start_date=date(2032, 7, 1),
-        end_date=date(2032, 8, 1),
+        start_date=date(2044, 7, 1),
+        end_date=date(2044, 8, 1),
     )
 
     assert not report["booking_reservations"]
@@ -837,8 +837,8 @@ def test_accounting_report_excludes_expired_booking(
     reservation_id = repository.create(
         cottage_id=1,
         source_id=2,  # BOOKING
-        check_in=date(2032, 6, 15),
-        check_out=date(2032, 6, 20),
+        check_in=date(2044, 6, 15),
+        check_out=date(2044, 6, 20),
         guests_count=2,
         status="EXPIRED",
         total_amount=Decimal("1000.00"),
@@ -853,8 +853,8 @@ def test_accounting_report_excludes_expired_booking(
 
     report = generate_accounting_report(
         connection=db_connection,
-        start_date=date(2032, 7, 1),
-        end_date=date(2032, 8, 1),
+        start_date=date(2044, 7, 1),
+        end_date=date(2044, 8, 1),
     )
 
     assert not report["booking_reservations"]   
@@ -868,8 +868,8 @@ def test_accounting_report_calculates_booking_gross_with_zero_commission(
     reservation_id = repository.create(
         cottage_id=1,
         source_id=2,  # BOOKING
-        check_in=date(2032, 7, 15),
-        check_out=date(2032, 7, 20),
+        check_in=date(2044, 7, 15),
+        check_out=date(2044, 7, 20),
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
@@ -885,8 +885,8 @@ def test_accounting_report_calculates_booking_gross_with_zero_commission(
 
     report = generate_accounting_report(
         connection=db_connection,
-        start_date=date(2032, 7, 1),
-        end_date=date(2032, 8, 1),
+        start_date=date(2044, 7, 1),
+        end_date=date(2044, 8, 1),
     )
 
     booking = report["booking_reservations"][0]
@@ -900,9 +900,9 @@ def test_accounting_reports_calculate_carry_between_months(
     repository = BankTransactionRepository(db_connection)
 
     transactions = [
-        (date(2032, 6, 15), Decimal("100.00")),
-        (date(2032, 7, 15), Decimal("200.00")),
-        (date(2032, 8, 15), Decimal("300.00")),
+        (date(2044, 6, 15), Decimal("100.00")),
+        (date(2044, 7, 15), Decimal("200.00")),
+        (date(2044, 8, 15), Decimal("300.00")),
     ]
 
     created_ids = []
@@ -922,8 +922,8 @@ def test_accounting_reports_calculate_carry_between_months(
 
     reports = generate_accounting_reports(
         connection=db_connection,
-        start_date=date(2032, 6, 1),
-        end_date=date(2032, 9, 1),
+        start_date=date(2044, 6, 1),
+        end_date=date(2044, 9, 1),
     )
 
     assert reports[0]["total_gross"] == Decimal("100.00")
@@ -945,8 +945,8 @@ def test_accounting_reports_carry_survives_empty_month(
     repository = BankTransactionRepository(db_connection)
 
     transactions = [
-        (date(2032, 6, 15), Decimal("100.00")),
-        (date(2032, 8, 15), Decimal("300.00")),
+        (date(2044, 6, 15), Decimal("100.00")),
+        (date(2044, 8, 15), Decimal("300.00")),
     ]
 
     created_ids = []
@@ -966,8 +966,8 @@ def test_accounting_reports_carry_survives_empty_month(
 
     reports = generate_accounting_reports(
         connection=db_connection,
-        start_date=date(2032, 6, 1),
-        end_date=date(2032, 9, 1),
+        start_date=date(2044, 6, 1),
+        end_date=date(2044, 9, 1),
     )
 
     # Czerwiec
@@ -985,3 +985,97 @@ def test_accounting_reports_carry_survives_empty_month(
     assert reports[2]["carry_amount"] == Decimal("100.00")
     assert reports[2]["grand_total"] == Decimal("400.00")
 
+def test_accounting_report_entries_are_sorted_by_date(
+    db_connection,
+    created_bank_transaction_cleanup,
+    created_reservation_cleanup,
+):
+    # Direct: 10.07.2044
+    transaction_id = BankTransactionRepository(db_connection).create(
+        transaction_date=date(2044, 7, 10),
+        source_id=1,
+        cottage_id=1,
+        amount=Decimal("1000.00"),
+    )
+
+    created_bank_transaction_cleanup.append(transaction_id)
+
+    # Booking: check-in 03.07.2032
+    reservation_id = ReservationRepository(db_connection).create(
+        cottage_id=1,
+        source_id=2,
+        check_in=date(2044, 7, 3),
+        check_out=date(2044, 7, 7),
+        guests_count=2,
+        status="CONFIRMED",
+        total_amount=Decimal("2000.00"),
+        accounting_included=True,
+        commission_amount=Decimal("200.00"),
+    )
+
+    created_reservation_cleanup["reservation_ids"].append(reservation_id)
+
+    db_connection.commit()
+
+    report = generate_accounting_report(
+        connection=db_connection,
+        start_date=date(2044, 7, 1),
+        end_date=date(2044, 8, 1),
+    )
+
+    entries = [
+            entry
+            for entry in report["entries"]
+            if entry.get("transaction_id") == transaction_id
+            or entry.get("reservation_id") == reservation_id
+    ]
+
+    assert [entry["source"] for entry in entries] == [
+        "Booking",
+        "Direct",
+    ]
+
+    assert [entry["date"] for entry in entries] == [
+        date(2044, 7, 3),
+        date(2044, 7, 10),
+    ]
+
+def test_accounting_report_excludes_direct_transaction_with_invoice(
+    db_connection,
+    created_bank_transaction_cleanup,
+    created_reservation_cleanup,
+):
+    reservation_id = ReservationRepository(db_connection).create(
+        cottage_id=6,
+        source_id=1,
+        check_in=date(2044, 8, 3),
+        check_out=date(2044, 8, 9),
+        guests_count=1,
+        status="CONFIRMED",
+        total_amount=Decimal("1777.00"),
+        accounting_included=True,
+        invoice_number="TEST/1/2044",
+    )
+
+    transaction_id = BankTransactionRepository(db_connection).create(
+        transaction_date=date(2044, 7, 7),
+        source_id=1,
+        cottage_id=None,
+        amount=Decimal("1777.00"),
+        notes="TEST/1/2044",
+    )
+
+    created_reservation_cleanup["reservation_ids"].append(reservation_id)
+    created_bank_transaction_cleanup.append(transaction_id)
+
+    report = generate_accounting_report(
+        connection=db_connection,
+        start_date=date(2044, 7, 1),
+        end_date=date(2044, 8, 1),
+    )
+
+    assert not any(
+        entry["gross_amount"] == Decimal("1777.00")
+        and entry["source"] == "Direct"
+        for entry in report["entries"]
+    )
