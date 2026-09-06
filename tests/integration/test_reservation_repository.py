@@ -1,5 +1,6 @@
 from datetime import date, datetime
 import pytest
+from decimal import Decimal
 
 from app.repositories.reservation_repository import ReservationRepository
 
@@ -163,3 +164,23 @@ def test_update_status_nonexistent_reservation_raises_error(
             reservation_id=999999,
             status="CANCELLED",
         )
+
+def test_create_reservation_stores_external_reservation_id(
+    db_connection,
+):
+    repository = ReservationRepository(db_connection)
+
+    reservation_id = repository.create(
+        cottage_id=1,
+        source_id=2,
+        check_in=date(2026, 8, 3),
+        check_out=date(2026, 8, 9),
+        guests_count=2,
+        total_amount=Decimal("1700.00"),
+        status="CONFIRMED",
+        external_reservation_id="6426",
+    )
+
+    reservation = repository.get_by_id(reservation_id)
+
+    assert reservation["external_reservation_id"] == "6426"

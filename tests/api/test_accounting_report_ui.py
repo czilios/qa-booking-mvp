@@ -332,3 +332,26 @@ def test_accounting_report_ui_displays_month_and_summary(
     assert "Z przeniesienia" in response.text
     assert "RAZEM" in response.text
     assert "Strona 1 z 1" in response.text
+
+def test_accounting_report_ui_displays_multiple_months(
+    api_client,
+):
+    response = api_client.get(
+        "/ui/reports/accounting",
+        params={
+            "start_month": 6,
+            "start_year": 2026,
+            "end_month": 8,
+            "end_year": 2026,
+        },
+    )
+
+    assert response.status_code == 200
+
+    assert "Czerwiec 2026" in response.text
+    assert "Lipiec 2026" in response.text
+    assert "Sierpień 2026" in response.text
+
+    assert "Strona 1 z 3" in response.text
+    assert "Strona 2 z 3" in response.text
+    assert "Strona 3 z 3" in response.text

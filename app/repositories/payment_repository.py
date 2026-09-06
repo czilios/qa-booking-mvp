@@ -83,7 +83,9 @@ class PaymentRepository:
                     amount,
                     status,
                     due_at,
-                    paid_at
+                    paid_at,
+                    invoice,
+                    bank_transaction_id
                 FROM payments
                 WHERE reservation_id = %s
                 ORDER BY id
@@ -291,5 +293,29 @@ class PaymentRepository:
             row["reservation_id"]: row["paid_amount"]
             for row in cursor.fetchall()
         }
+    def get_payment_by_bank_transaction_id(
+    self,
+    bank_transaction_id: int,
+    ):
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+            """
+            SELECT
+                id,
+                reservation_id,
+                type,
+                amount,
+                status,
+                due_at,
+                paid_at,
+                invoice,
+                bank_transaction_id
+            FROM payments
+            WHERE bank_transaction_id = %s
+            """,
+            (bank_transaction_id,),
+        )
+
+        return cursor.fetchone()
 
 

@@ -4,6 +4,7 @@ from decimal import Decimal
 from pymysql.connections import Connection
 
 from app.repositories.reservation_repository import ReservationRepository
+from app.repositories.bank_transaction_repository import BankTransactionRepository
 from app.repositories.payment_repository import PaymentRepository
 
 
@@ -116,3 +117,50 @@ def generate_payment_report(
         )
 
     return report_rows
+
+def sync_payments(
+    connection: Connection,
+    start_date: date,
+    end_date: date,
+):
+    reservation_repository = ReservationRepository(connection)
+    payment_repository = PaymentRepository(connection)
+    bank_transaction_repository = BankTransactionRepository(connection)
+
+    transactions = bank_transaction_repository.list_by_date_range(
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+    for transaction in transactions:
+        existing_payment = payment_repository.get_payment_by_bank_transaction_id(
+            transaction["id"]
+        )
+
+        if existing_payment is not None:
+            continue
+
+        if not transaction["notes"]:
+            continue
+
+        reservations = reservation_repository.get_by_invoice_number(
+            transaction["notes"]
+        )
+
+        if not reservations:
+            reservations = reservation_repository.get_by_external_reservation_id(
+                transaction["notes"]
+            )
+
+        for reservation in reservations:
+            if reservation["total_amount"] != transaction["amount"]:
+                continue
+
+            payment_repository.create_payment(
+                reservation_id=reservation["id"],
+                payment_type="DEPOSIT",
+                amount=transaction["amount"],
+                status="PAID",
+                invoice=bool(reservation["invoice_number"]),
+                bank_transaction_id=transaction["id"],
+            )

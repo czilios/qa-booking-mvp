@@ -20,7 +20,7 @@ from app.availability_service import AvailabilityService
 from app.bank_statement_service import BankStatementReportService
 from app.bank_transaction_service import list_bank_transactions, sum_bank_transactions,create_bank_transaction
 from app.overall_report_service import generate_overall_report
-from app.accounting_report_service import generate_accounting_report
+from app.accounting_report_service import generate_accounting_report, generate_accounting_reports
 from app.sales_report_service import generate_sales_report
 from app.repositories.bank_transaction_repository import BankTransactionRepository
 from app.repositories.block_repository import BlockRepository
@@ -933,6 +933,10 @@ def accounting_report_ui(
     request: Request,
     month: int = 7,
     year: int = 2026,
+    start_month: int | None = None,
+    start_year: int | None = None,
+    end_month: int | None = None,
+    end_year: int | None = None,
     db_connection=Depends(get_db_connection),
 ):
     if month < 1 or month > 12:
@@ -941,33 +945,44 @@ def accounting_report_ui(
             detail="Invalid month",
         )
 
-    start_date = date(year, month, 1)
+    if start_month is not None:
+        if (
+        start_year is None
+        or end_month is None
+        or end_year is None
+       ):
+            raise HTTPException(
+            status_code=400,
+            detail="Complete date range is required",
+        )
 
-    if month == 12:
-        end_date = date(year + 1, 1, 1)
+        report_start_date = date(start_year, start_month, 1)
+        if end_month == 12:
+            report_end_date = date(end_year + 1, 1, 1)
+        else:
+            report_end_date = date(
+                end_year,
+                end_month + 1,
+                1,
+            )
     else:
-        end_date = date(year, month + 1, 1)
+        report_start_date = date(year, month, 1)
 
-    report = generate_accounting_report(
-        connection=db_connection,
-        start_date=start_date,
-        end_date=end_date,
-    )
+        if month == 12:
+            report_end_date = date(year + 1, 1, 1)
+        else:
+            report_end_date = date(year, month + 1, 1)
+
+    reports = generate_accounting_reports(
+    connection=db_connection,
+    start_date=report_start_date,
+    end_date=report_end_date,
+  )
 
     return templates.TemplateResponse(
         request=request,
         name="accounting_report.html",
-            context={
-                "month": month,
-                "year": year,
-                "month_name": MONTH_NAMES_PL[month],
-                "month_name_genitive": MONTH_NAMES_PL_GENITIVE[month],
-                "transactions": report["transactions"],
-                "booking_reservations": report["booking_reservations"],
-                "total_gross": report["total_gross"],
-                "total_net": report["total_net"],
-                "total_vat": report["total_vat"],
-                "carry_amount": Decimal("0.00"),
-                "grand_total": report["total_gross"],
-            },
+        context={
+            "reports": reports,
+        },
     )

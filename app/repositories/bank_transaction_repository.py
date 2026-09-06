@@ -64,6 +64,34 @@ class BankTransactionRepository:
             )
 
             return cursor.fetchone()
+
+    def get_by_invoice_number(self, invoice_number: str):
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+            """
+            SELECT
+                id,
+                cottage_id,
+                customer_id,
+                source_id,
+                check_in,
+                check_out,
+                guests_count,
+                status,
+                total_amount,
+                accounting_included,
+                notes,
+                commission_amount,
+                invoice_number
+            FROM reservations
+            WHERE invoice_number = %s
+            """,
+            (invoice_number,),
+        )
+
+        return cursor.fetchall()
+
+    
     def list_by_date_range(
     self,
     start_date: date,

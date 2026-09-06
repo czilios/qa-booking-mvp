@@ -2,56 +2,74 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>Raport księgowy</title>
+    <title>Ewidencja sprzedaży</title>
 </head>
 <body>
-   <h1>Raport księgowy — {{ month_name }} {{ year }}</h1>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Data</th>
-                <th>Źródło</th>
-                <th>Kwota brutto</th>
-                <th>Netto</th>
-                <th>VAT</th>
-                <th>Uwagi</th>
-            </tr>
-        </thead>
+{% for report in reports %}
 
-        <tbody>
-            {% for transaction in transactions %}
+    <div class="report-page">
+
+    <h1>Ewidencja sprzedaży — {{ report.month_name }} {{ report.year }}</h1>
+
+        <table>
+            <thead>
                 <tr>
-                    <td>{{ transaction.transaction_date }}</td>
-                    <td>Direct</td>
-                    <td>{{ transaction.amount }}</td>
-                    <td>{{ transaction.net_amount }}</td>
-                    <td>{{ transaction.vat_amount }}</td>
-                    <td>{{ transaction.description or "" }}</td>
+                    <th>Data</th>
+                    <th>Źródło</th>
+                    <th>Kwota brutto</th>
+                    <th>Netto</th>
+                    <th>VAT</th>
+                    <th>Uwagi</th>
                 </tr>
-            {% endfor %}
+            </thead>
 
-            {% for booking in booking_reservations %}
-                <tr>
-                    <td>{{ booking.check_in }}</td>
-                    <td>Booking</td>
-                    <td>{{ booking.gross_amount }}</td>
-                    <td>{{ booking.net_amount }}</td>
-                    <td>{{ booking.vat_amount }}</td>
-                    <td>Rezerwacja #{{ booking.id }}</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    <h2>Suma {{ month_name_genitive }}</h2>
+            <tbody>
+                {% for transaction in report.transactions %}
+                    <tr>
+                        <td>{{ transaction.transaction_date }}</td>
+                        <td>Direct</td>
+                        <td>{{ transaction.gross_amount }}</td>
+                        <td>{{ transaction.net_amount }}</td>
+                        <td>{{ transaction.vat_amount }}</td>
+                        <td>{{ transaction.description or "" }}</td>
+                    </tr>
+                {% endfor %}
 
-    <div>Brutto: {{ total_gross }}</div>
-    <div>Netto: {{ total_net }}</div>
-    <div>VAT: {{ total_vat }}</div>
+                {% for booking in report.booking_reservations %}
+                    <tr>
+                        <td>{{ booking.check_in }}</td>
+                        <td>Booking</td>
+                        <td>{{ booking.gross_amount }}</td>
+                        <td>{{ booking.net_amount }}</td>
+                        <td>{{ booking.vat_amount }}</td>
+                        <td>Rezerwacja #{{ booking.id }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
 
-    <div>Z przeniesienia: {{ carry_amount }}</div>
-    <div>RAZEM: {{ grand_total }}</div>
+        <h2>Suma {{ report.month_name_genitive }}</h2>
 
-    <div>Strona 1 z 1</div>
+        <div>Brutto: {{ report.total_gross }}</div>
+        <div>Netto: {{ report.total_net }}</div>
+        <div>VAT: {{ report.total_vat }}</div>
+
+        <div>
+            Z przeniesienia: {{ report.carry_amount }}
+        </div>
+
+        <div>
+            RAZEM: {{ report.grand_total }}
+        </div>
+
+        <div>
+            Strona {{ loop.index }} z {{ reports | length }}
+        </div>
+
+    </div>
+
+{% endfor %}
+
 </body>
 </html>

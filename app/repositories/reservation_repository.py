@@ -22,6 +22,7 @@ class ReservationRepository:
         notes: str | None = None,
         commission_amount: Decimal | None = None,
         invoice_number: str | None = None,
+        external_reservation_id: str | None = None,
     ) -> int:
         with self.connection.cursor() as cursor:
             cursor.execute(
@@ -39,9 +40,10 @@ class ReservationRepository:
                     accounting_included,
                     notes,
                     commission_amount,
-                    invoice_number
+                    invoice_number,
+                    external_reservation_id
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     cottage_id,
@@ -57,6 +59,7 @@ class ReservationRepository:
                     notes,
                     commission_amount,
                     invoice_number,
+                    external_reservation_id,
                 ),
             )
 
@@ -80,7 +83,8 @@ class ReservationRepository:
                     accounting_included,
                     notes,
                     commission_amount,
-                    invoice_number
+                    invoice_number,
+                    external_reservation_id
                 FROM reservations
                 WHERE id = %s
                 """,
@@ -88,6 +92,32 @@ class ReservationRepository:
             )
 
             return cursor.fetchone()
+    def get_by_invoice_number(self, invoice_number: str):
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+            """
+            SELECT
+                id,
+                cottage_id,
+                customer_id,
+                source_id,
+                check_in,
+                check_out,
+                guests_count,
+                status,
+                total_amount,
+                accounting_included,
+                notes,
+                commission_amount,
+                invoice_number,
+                external_reservation_id
+            FROM reservations
+            WHERE invoice_number = %s
+            """,
+            (invoice_number,),
+        )
+
+        return cursor.fetchall()
 
     def get_by_id_for_update(self, reservation_id: int):
         with self.connection.cursor() as cursor:
@@ -385,6 +415,36 @@ class ReservationRepository:
                 start_date,
                 end_date,
             ),
+        )
+
+        return cursor.fetchall()
+    
+    def get_by_external_reservation_id(
+    self,
+    external_reservation_id: str,
+    ):
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+            """
+            SELECT
+                id,
+                cottage_id,
+                customer_id,
+                source_id,
+                check_in,
+                check_out,
+                guests_count,
+                status,
+                total_amount,
+                accounting_included,
+                notes,
+                commission_amount,
+                invoice_number,
+                external_reservation_id
+            FROM reservations
+            WHERE external_reservation_id = %s
+            """,
+            (external_reservation_id,),
         )
 
         return cursor.fetchall()

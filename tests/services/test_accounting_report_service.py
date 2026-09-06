@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
-from app.accounting_report_service import generate_accounting_report
+from app.accounting_report_service import generate_accounting_report, generate_accounting_reports
 from app.repositories.bank_transaction_repository import (
     BankTransactionRepository,
 )
@@ -893,5 +893,95 @@ def test_accounting_report_calculates_booking_gross_with_zero_commission(
 
     assert booking["gross_amount"] == Decimal("1000.00")
 
+def test_accounting_reports_calculate_carry_between_months(
+    db_connection,
+    created_bank_transaction_cleanup,
+):
+    repository = BankTransactionRepository(db_connection)
 
+    transactions = [
+        (date(2032, 6, 15), Decimal("100.00")),
+        (date(2032, 7, 15), Decimal("200.00")),
+        (date(2032, 8, 15), Decimal("300.00")),
+    ]
+
+    created_ids = []
+
+    for transaction_date, amount in transactions:
+        transaction_id = repository.create(
+            transaction_date=transaction_date,
+            source_id=1,
+            cottage_id=1,
+            amount=amount,
+        )
+        created_ids.append(transaction_id)
+
+    created_bank_transaction_cleanup.extend(created_ids)
+
+    db_connection.commit()
+
+    reports = generate_accounting_reports(
+        connection=db_connection,
+        start_date=date(2032, 6, 1),
+        end_date=date(2032, 9, 1),
+    )
+
+    assert reports[0]["total_gross"] == Decimal("100.00")
+    assert reports[0]["carry_amount"] == Decimal("0.00")
+    assert reports[0]["grand_total"] == Decimal("100.00")
+
+    assert reports[1]["total_gross"] == Decimal("200.00")
+    assert reports[1]["carry_amount"] == Decimal("100.00")
+    assert reports[1]["grand_total"] == Decimal("300.00")
+
+    assert reports[2]["total_gross"] == Decimal("300.00")
+    assert reports[2]["carry_amount"] == Decimal("300.00")
+    assert reports[2]["grand_total"] == Decimal("600.00")
+
+def test_accounting_reports_carry_survives_empty_month(
+    db_connection,
+    created_bank_transaction_cleanup,
+):
+    repository = BankTransactionRepository(db_connection)
+
+    transactions = [
+        (date(2032, 6, 15), Decimal("100.00")),
+        (date(2032, 8, 15), Decimal("300.00")),
+    ]
+
+    created_ids = []
+
+    for transaction_date, amount in transactions:
+        transaction_id = repository.create(
+            transaction_date=transaction_date,
+            source_id=1,
+            cottage_id=1,
+            amount=amount,
+        )
+        created_ids.append(transaction_id)
+
+    created_bank_transaction_cleanup.extend(created_ids)
+
+    db_connection.commit()
+
+    reports = generate_accounting_reports(
+        connection=db_connection,
+        start_date=date(2032, 6, 1),
+        end_date=date(2032, 9, 1),
+    )
+
+    # Czerwiec
+    assert reports[0]["total_gross"] == Decimal("100.00")
+    assert reports[0]["carry_amount"] == Decimal("0.00")
+    assert reports[0]["grand_total"] == Decimal("100.00")
+
+    # Lipiec — brak przychodów
+    assert reports[1]["total_gross"] == Decimal("0.00")
+    assert reports[1]["carry_amount"] == Decimal("100.00")
+    assert reports[1]["grand_total"] == Decimal("100.00")
+
+    # Sierpień
+    assert reports[2]["total_gross"] == Decimal("300.00")
+    assert reports[2]["carry_amount"] == Decimal("100.00")
+    assert reports[2]["grand_total"] == Decimal("400.00")
 
