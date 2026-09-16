@@ -1,6 +1,6 @@
 from datetime import date
 from decimal import Decimal
-
+from app.repositories.payment_repository import PaymentRepository
 from app.repositories.bank_transaction_repository import (
     BankTransactionRepository,
 )
@@ -59,6 +59,7 @@ def generate_accounting_report(
 ):
     bank_repository = BankTransactionRepository(connection)
     reservation_repository = ReservationRepository(connection)
+    payment_repository = PaymentRepository(connection)
 
     transactions = bank_repository.list_by_date_range(
         start_date=start_date,
@@ -71,64 +72,65 @@ def generate_accounting_report(
         if transaction["source_id"] == DIRECT_SOURCE_ID
     ]
     entries = []
-
+    
     for transaction in direct_transactions:
-        transaction["gross_amount"] = transaction["amount"]
+        payment = payment_repository.get_payment_by_bank_transaction_id(
+        transaction["id"]
+    )
 
-        (
-            transaction["net_amount"],
-            transaction["vat_amount"],
-        ) = calculate_vat_values(
-            transaction["gross_amount"]
+        if payment is not None and payment["status"] == "PAID" and payment["invoice"]:
+            continue
+
+        transaction["gross_amount"] = transaction["amount"]
+        transaction["net_amount"], transaction["vat_amount"] = calculate_vat_values(
+        transaction["gross_amount"]
         )
 
         entries.append({
-            "date": transaction["transaction_date"],
-            "source": "Direct",
-            "transaction_id": transaction["id"],
-            "gross_amount": transaction["gross_amount"],
-            "net_amount": transaction["net_amount"],
-            "vat_amount": transaction["vat_amount"],
+        "date": transaction["transaction_date"],
+        "source": "Direct",
+        "transaction_id": transaction["id"],
+        "gross_amount": transaction["gross_amount"],
+        "net_amount": transaction["net_amount"],
+        "vat_amount": transaction["vat_amount"],
         })
         
     booking_reservations = reservation_repository.get_accounting_booking_reservations_by_check_in_between(
         start_date=start_date,
         end_date=end_date,
         )
+    
+
     for booking in booking_reservations:
-        booking["gross_amount"] = (
-            booking["total_amount"] or Decimal("0.00")
-        ) + (
-            booking["commission_amount"] or Decimal("0.00")
-        )
+            booking["gross_amount"] = (
+                booking["total_amount"] or Decimal("0.00")
+            ) + (
+                booking["commission_amount"] or Decimal("0.00")
+            )
+    
+            (
+                booking["net_amount"],
+                booking["vat_amount"],
+            ) = calculate_vat_values(
+                booking["gross_amount"]
+            )
+    
+            entries.append({
+                "date": booking["check_in"],
+                "source": "Booking",
+                "reservation_id": booking["id"],
+                "gross_amount": booking["gross_amount"],
+                "net_amount": booking["net_amount"],
+                "vat_amount": booking["vat_amount"],
+            })
 
-        (
-            booking["net_amount"],
-            booking["vat_amount"],
-        ) = calculate_vat_values(
-            booking["gross_amount"]
-        )
-
-        entries.append({
-            "date": booking["check_in"],
-            "source": "Booking",
-            "reservation_id": booking["id"],
-            "gross_amount": booking["gross_amount"],
-            "net_amount": booking["net_amount"],
-            "vat_amount": booking["vat_amount"],
-        })
     entries.sort(key=lambda entry: entry["date"])
 
-    total_gross = (
-            sum(
-                (transaction["gross_amount"] for transaction in direct_transactions),
-                Decimal("0.00"),
-            )
-            + sum(
-                (booking["gross_amount"] for booking in booking_reservations),
-                Decimal("0.00"),
-            )
-        )
+    total_gross = sum(
+    (entry["gross_amount"] for entry in entries),
+    Decimal("0.00"),
+    
+    )
 
     total_net, total_vat = calculate_vat_values(total_gross)
             

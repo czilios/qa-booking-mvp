@@ -5,6 +5,7 @@ from app.accounting_report_service import generate_accounting_report, generate_a
 from app.repositories.bank_transaction_repository import (
     BankTransactionRepository,
 )
+from app.repositories.payment_repository import PaymentRepository
 from app.repositories.reservation_repository import ReservationRepository
 from tests.conftest import created_bank_transaction_cleanup
 
@@ -1063,6 +1064,15 @@ def test_accounting_report_excludes_direct_transaction_with_invoice(
         cottage_id=None,
         amount=Decimal("1777.00"),
         notes="TEST/1/2044",
+    )
+
+    payment_id = PaymentRepository(db_connection).create_payment(
+        reservation_id=reservation_id,
+        payment_type="DEPOSIT",
+        amount=Decimal("1777.00"),
+        status="PAID",
+        invoice=True,
+        bank_transaction_id=transaction_id,
     )
 
     created_reservation_cleanup["reservation_ids"].append(reservation_id)
