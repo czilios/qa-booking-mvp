@@ -5,6 +5,14 @@ from app.repositories.reservation_repository import ReservationRepository
 from app.repositories.payment_repository import PaymentRepository
 
 
+def set_reservation_created_at(db_connection, reservation_id, created_at):
+    with db_connection.cursor() as cursor:
+        cursor.execute(
+            "UPDATE reservations SET created_at = %s WHERE id = %s",
+            (created_at, reservation_id),
+        )
+
+
 def test_sales_report_ui_returns_200(
     db_connection,
     api_client,
@@ -24,6 +32,11 @@ def test_sales_report_ui_returns_200(
 
     created_reservation_cleanup["reservation_ids"].append(
         reservation_id
+    )
+    set_reservation_created_at(
+        db_connection,
+        reservation_id,
+        date(2031, 10, 10),
     )
 
     response = api_client.get(
@@ -55,6 +68,11 @@ def test_sales_report_ui_displays_reservation(
 
     created_reservation_cleanup["reservation_ids"].append(
         reservation_id
+    )
+    set_reservation_created_at(
+        db_connection,
+        reservation_id,
+        date(2031, 10, 10),
     )
 
     response = api_client.get(
@@ -102,6 +120,12 @@ def test_sales_report_ui_displays_sales_by_source(
     created_reservation_cleanup["reservation_ids"].extend(
         reservation_ids
     )
+    for reservation_id in reservation_ids:
+        set_reservation_created_at(
+            db_connection,
+            reservation_id,
+            date(2031, 10, 10),
+        )
 
     response = api_client.get(
         "/ui/reports/sales",
@@ -136,6 +160,11 @@ def test_sales_report_ui_displays_paid_amount_and_balance(
 
     created_reservation_cleanup["reservation_ids"].append(
         reservation_id
+    )
+    set_reservation_created_at(
+        db_connection,
+        reservation_id,
+        date(2031, 10, 10),
     )
 
     payment_repository = PaymentRepository(db_connection)

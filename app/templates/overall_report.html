@@ -45,6 +45,10 @@
                 name="month"
                 required
             >
+                <option value="0" {% if month == 0 %}selected{% endif %}>
+                    Cały rok
+                </option>
+
                 <option value="1" {% if month == 1 %}selected{% endif %}>
                     Styczeń
                 </option>
@@ -133,11 +137,11 @@
             <div class="report-summary-card">
 
                 <span class="label">
-                    Liczba pobytów
+                    Liczba wpływów
                 </span>
 
                 <strong>
-                    {{ reservations | length }}
+                    {{ transactions | length }}
                 </strong>
 
             </div>
@@ -146,7 +150,7 @@
             <div class="report-summary-card">
 
                 <span class="label">
-                    Łączna wartość
+                    Łączne wpływy
                 </span>
 
                 <strong>
@@ -161,10 +165,10 @@
         <div class="report-results">
 
             <h2>
-                Rezerwacje
+                Wpływy
             </h2>
 
-            {% if reservations %}
+            {% if transactions %}
 
                 <div class="report-table-wrapper">
 
@@ -174,54 +178,43 @@
 
                             <tr>
                                 <th>ID</th>
+                                <th>Data wpływu</th>
                                 <th>Domek</th>
                                 <th>Źródło</th>
-                                <th>Przyjazd</th>
-                                <th>Wyjazd</th>
+                                <th>Opis</th>
                                 <th>Kwota</th>
-                                <th>Księgowość</th>
                             </tr>
 
                         </thead>
 
                         <tbody>
 
-                            {% for reservation in reservations %}
+                            {% for transaction in transactions %}
 
                                 <tr>
 
                                     <td>
-                                        {{ reservation.id }}
+                                        {{ transaction.id }}
                                     </td>
 
                                     <td>
-                                        {{ reservation.cottage_id }}
+                                        {{ transaction.transaction_date }}
                                     </td>
 
                                     <td>
-                                        {{ reservation.source_name }}
+                                        {{ transaction.cottage_id or "—" }}
                                     </td>
 
                                     <td>
-                                        {{ reservation.check_in }}
+                                        {{ transaction.source_name }}
                                     </td>
 
                                     <td>
-                                        {{ reservation.check_out }}
+                                        {{ transaction.description or transaction.notes or "—" }}
                                     </td>
 
                                     <td>
-                                        {{ "{:,.2f}".format(reservation.total_amount).replace(",", " ").replace(".", ",") }} zł
-                                    </td>
-
-                                    <td>
-
-                                        {% if reservation.accounting_included %}
-                                            ✓
-                                        {% else %}
-                                            —
-                                        {% endif %}
-
+                                        {{ "{:,.2f}".format(transaction.amount).replace(",", " ").replace(".", ",") }} zł
                                     </td>
 
                                 </tr>
@@ -239,11 +232,11 @@
                 <div class="no-availability">
 
                     <strong>
-                        Brak rezerwacji
+                        Brak wpływów
                     </strong>
 
                     <p>
-                        W wybranym miesiącu nie ma żadnych pobytów.
+                        W wybranym miesiącu nie ma żadnych wpływów na konto.
                     </p>
 
                 </div>

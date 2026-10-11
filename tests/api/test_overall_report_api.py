@@ -1,6 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
+from app.repositories.bank_transaction_repository import BankTransactionRepository
 from app.repositories.reservation_repository import ReservationRepository
 
 
@@ -141,3 +142,54 @@ def test_overall_report_includes_non_accounting_reservation(
 
     assert reservation_id in reservation_ids
 
+
+def test_overall_report_includes_bank_transaction_by_transaction_date(
+    db_connection,
+    api_client,
+    created_reservation_cleanup,
+    created_bank_transaction_cleanup,
+):
+    report_params = {
+        "start_date": "2026-07-01",
+        "end_date": "2026-08-01",
+    }
+    baseline_response = api_client.get(
+        "/api/overall-report",
+        params=report_params,
+    )
+    assert baseline_response.status_code == 200
+
+    invoice_number = "TEST-CASHFLOW-JUL-2026"
+    reservation_id = ReservationRepository(db_connection).create(
+        cottage_id=1,
+        source_id=1,
+        check_in=date(2026, 8, 3),
+        check_out=date(2026, 8, 9),
+        guests_count=2,
+        status="CONFIRMED",
+        total_amount=Decimal("1700.00"),
+        invoice_number=invoice_number,
+    )
+    created_reservation_cleanup["reservation_ids"].append(reservation_id)
+
+    transaction_id = BankTransactionRepository(db_connection).create(
+        transaction_date=date(2026, 7, 7),
+        source_id=1,
+        cottage_id=None,
+        amount=Decimal("1700.00"),
+        notes=invoice_number,
+    )
+    created_bank_transaction_cleanup.append(transaction_id)
+    db_connection.commit()
+
+    response = api_client.get(
+        "/api/overall-report",
+        params=report_params,
+    )
+
+    assert response.status_code == 200
+    reported_increase = (
+        Decimal(str(response.json()["total_amount"]))
+        - Decimal(str(baseline_response.json()["total_amount"]))
+    )
+    assert reported_increase == Decimal("1700.00")

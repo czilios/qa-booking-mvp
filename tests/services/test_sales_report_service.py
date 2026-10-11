@@ -6,7 +6,49 @@ from app.repositories.payment_repository import PaymentRepository
 from app.sales_report_service import generate_sales_report
 
 
-def test_sales_report_uses_check_in_month(
+def set_reservation_created_at(db_connection, reservation_id, created_at):
+    with db_connection.cursor() as cursor:
+        cursor.execute(
+            "UPDATE reservations SET created_at = %s WHERE id = %s",
+            (created_at, reservation_id),
+        )
+
+
+def test_sales_report_assigns_sale_to_reservation_created_month(
+    db_connection,
+):
+    reservation_id = ReservationRepository(db_connection).create(
+        cottage_id=1,
+        source_id=1,
+        check_in=date(2026, 8, 3),
+        check_out=date(2026, 8, 9),
+        guests_count=2,
+        status="CONFIRMED",
+        total_amount=Decimal("1700.00"),
+    )
+
+    set_reservation_created_at(
+        db_connection,
+        reservation_id,
+        datetime(2026, 7, 7, 12, 0, 0),
+    )
+
+    report = generate_sales_report(
+        db_connection,
+        start_date=date(2026, 7, 1),
+        end_date=date(2026, 8, 1),
+    )
+
+    reservation_ids = {
+        reservation["id"]
+        for reservation in report["reservations"]
+    }
+
+    assert reservation_id in reservation_ids
+    assert report["total_amount"] == Decimal("1700.00")
+
+
+def test_sales_report_uses_reservation_created_month(
     db_connection,
 ):
     repository = ReservationRepository(db_connection)
@@ -19,6 +61,11 @@ def test_sales_report_uses_check_in_month(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("2100.00"),
+    )
+    set_reservation_created_at(
+        db_connection,
+        reservation_id,
+        datetime(2027, 10, 5, 12, 0, 0),
     )
 
     report = generate_sales_report(
@@ -33,7 +80,7 @@ def test_sales_report_uses_check_in_month(
     }
 
     assert reservation_id in reservation_ids
-def test_sales_report_assigns_cross_month_stay_to_check_in_month(
+def test_sales_report_assigns_cross_month_stay_to_reservation_created_month(
     db_connection,
 ):
     repository = ReservationRepository(db_connection)
@@ -47,7 +94,11 @@ def test_sales_report_assigns_cross_month_stay_to_check_in_month(
         status="CONFIRMED",
         total_amount=Decimal("3000.00"),
     )
-
+    set_reservation_created_at(
+        db_connection,
+        reservation_id,
+        datetime(2027, 9, 15, 12, 0, 0),
+    )
 
     september_report = generate_sales_report(
         db_connection,
@@ -88,7 +139,11 @@ def test_sales_report_excludes_cancelled_reservation(
         status="CANCELLED",
         total_amount=Decimal("1960.00"),
     )
-
+    set_reservation_created_at(
+        db_connection,
+        reservation_id,
+        datetime(2027, 10, 5, 12, 0, 0),
+    )
 
     report = generate_sales_report(
         db_connection,
@@ -103,7 +158,7 @@ def test_sales_report_excludes_cancelled_reservation(
 
     assert reservation_id not in reservation_ids
 
-def test_sales_report_uses_check_in_month_regardless_of_payment_date(
+def test_sales_report_uses_reservation_created_month_regardless_of_payment_date(
     db_connection,
 ):
     reservation_repository = ReservationRepository(db_connection)
@@ -112,11 +167,16 @@ def test_sales_report_uses_check_in_month_regardless_of_payment_date(
     reservation_id = reservation_repository.create(
         cottage_id=1,
         source_id=2,  # BOOKING
-        check_in=date(2027, 7, 28),
-        check_out=date(2027, 8, 4),
+        check_in=date(2027, 8, 3),
+        check_out=date(2027, 8, 9),
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("2100.00"),
+    )
+    set_reservation_created_at(
+        db_connection,
+        reservation_id,
+        datetime(2027, 7, 7, 12, 0, 0),
     )
 
     payment_id = payment_repository.create_payment(
@@ -170,7 +230,11 @@ def test_sales_report_resolves_booking_source(
         status="CONFIRMED",
         total_amount=Decimal("2100.00"),
     )
-
+    set_reservation_created_at(
+        db_connection,
+        reservation_id,
+        datetime(2027, 10, 5, 12, 0, 0),
+    )
 
     report = generate_sales_report(
         db_connection,
@@ -211,6 +275,17 @@ def test_sales_report_sums_total_amount(
     status="CONFIRMED",
     total_amount=Decimal("1500.00"),
     )
+
+    set_reservation_created_at(
+        db_connection,
+        first_reservation_id,
+        datetime(2028, 10, 5, 12, 0, 0),
+    )
+    set_reservation_created_at(
+        db_connection,
+        second_reservation_id,
+        datetime(2028, 10, 15, 12, 0, 0),
+    )
     
     created_reservation_cleanup["reservation_ids"].extend(
     [
@@ -242,6 +317,11 @@ def test_sales_report_handles_null_total_amount(
         guests_count=2,
         status="CONFIRMED",
         total_amount=None,
+    )
+    set_reservation_created_at(
+        db_connection,
+        reservation_id,
+        datetime(2028, 12, 5, 12, 0, 0),
     )
 
     created_reservation_cleanup["reservation_ids"].append(
@@ -293,6 +373,22 @@ def test_sales_report_summarizes_sales_by_source(
         total_amount=Decimal("2000.00"),
     )
 
+    set_reservation_created_at(
+        db_connection,
+        direct_reservation_id,
+        datetime(2028, 11, 1, 12, 0, 0),
+    )
+    set_reservation_created_at(
+        db_connection,
+        booking_reservation_id,
+        datetime(2028, 11, 2, 12, 0, 0),
+    )
+    set_reservation_created_at(
+        db_connection,
+        belvilla_reservation_id,
+        datetime(2028, 11, 3, 12, 0, 0),
+    )
+
     created_reservation_cleanup["reservation_ids"].extend(
         [
             direct_reservation_id,
@@ -338,6 +434,17 @@ def test_sales_report_sums_multiple_reservations_from_same_source(
         total_amount=Decimal("1500.00"),
     )
 
+    set_reservation_created_at(
+        db_connection,
+        first_reservation_id,
+        datetime(2028, 12, 5, 12, 0, 0),
+    )
+    set_reservation_created_at(
+        db_connection,
+        second_reservation_id,
+        datetime(2028, 12, 10, 12, 0, 0),
+    )
+
     created_reservation_cleanup["reservation_ids"].extend(
         [
             first_reservation_id,
@@ -379,6 +486,11 @@ def test_sales_report_source_totals_equal_overall_total(
             status="CONFIRMED",
             total_amount=Decimal(str(amount)),
         )
+        set_reservation_created_at(
+            db_connection,
+            reservation_id,
+            datetime(2029, 10, 10, 12, 0, 0),
+        )
         reservation_ids.append(reservation_id)
 
     created_reservation_cleanup["reservation_ids"].extend(
@@ -417,6 +529,11 @@ def test_sales_report_excludes_pending_and_expired_reservations(
             guests_count=2,
             status=status,
             total_amount=Decimal("2000.00"),
+        )
+        set_reservation_created_at(
+            db_connection,
+            reservation_id,
+            datetime(2029, 11, 10, 12, 0, 0),
         )
 
         reservation_ids.append(reservation_id)
@@ -471,6 +588,11 @@ def test_sales_report_includes_customer_phone(
         status="CONFIRMED",
         total_amount=Decimal("2100.00"),
     )
+    set_reservation_created_at(
+        db_connection,
+        reservation_id,
+        datetime(2030, 10, 5, 12, 0, 0),
+    )
 
     created_reservation_cleanup["reservation_ids"].append(
         reservation_id
@@ -505,6 +627,11 @@ def test_sales_report_calculates_paid_amount_and_balance(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
+    )
+    set_reservation_created_at(
+        db_connection,
+        reservation_id,
+        datetime(2030, 11, 5, 12, 0, 0),
     )
 
     payment_id = payment_repository.create_payment(
@@ -555,6 +682,11 @@ def test_sales_report_calculates_fully_paid_reservation(
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
     )
+    set_reservation_created_at(
+        db_connection,
+        reservation_id,
+        datetime(2030, 12, 5, 12, 0, 0),
+    )
 
     payment_id = payment_repository.create_payment(
         reservation_id=reservation_id,
@@ -603,6 +735,11 @@ def test_sales_report_sums_multiple_paid_payments_for_reservation(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1950.00"),
+    )
+    set_reservation_created_at(
+        db_connection,
+        reservation_id,
+        datetime(2031, 1, 5, 12, 0, 0),
     )
 
     first_payment_id = payment_repository.create_payment(
@@ -665,6 +802,11 @@ def test_sales_report_excludes_refunded_amount_from_paid_amount(
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
     )
+    set_reservation_created_at(
+        db_connection,
+        reservation_id,
+        datetime(2031, 2, 5, 12, 0, 0),
+    )
 
     paid_payment_id = payment_repository.create_payment(
         reservation_id=reservation_id,
@@ -721,6 +863,11 @@ def test_sales_report_treats_forfeited_payment_as_paid(
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
     )
+    set_reservation_created_at(
+        db_connection,
+        reservation_id,
+        datetime(2031, 3, 5, 12, 0, 0),
+    )
 
     payment_id = payment_repository.create_payment(
         reservation_id=reservation_id,
@@ -764,6 +911,11 @@ def test_sales_report_includes_invoice_number(
         total_amount=Decimal("1000.00"),
         invoice_number="FV/2032/001",
     )
+    set_reservation_created_at(
+        db_connection,
+        reservation_id,
+        datetime(2032, 10, 5, 12, 0, 0),
+    )
 
     db_connection.commit()
 
@@ -779,7 +931,7 @@ def test_sales_report_includes_invoice_number(
     )
 
     assert reservation["invoice_number"] == "FV/2032/001"
-def test_sales_report_sorts_reservations_by_check_in_date_regardless_of_source(
+def test_sales_report_sorts_reservations_by_created_at_regardless_of_source(
     db_connection,
     created_reservation_cleanup,
 ):
@@ -822,6 +974,21 @@ def test_sales_report_sorts_reservations_by_check_in_date_regardless_of_source(
             belvilla_id,
         ]
     )
+    set_reservation_created_at(
+        db_connection,
+        belvilla_id,
+        datetime(2028, 11, 1, 12, 0, 0),
+    )
+    set_reservation_created_at(
+        db_connection,
+        direct_id,
+        datetime(2028, 11, 2, 12, 0, 0),
+    )
+    set_reservation_created_at(
+        db_connection,
+        booking_id,
+        datetime(2028, 11, 3, 12, 0, 0),
+    )
 
     report = generate_sales_report(
         db_connection,
@@ -834,6 +1001,6 @@ def test_sales_report_sorts_reservations_by_check_in_date_regardless_of_source(
         for reservation in report["reservations"]
     ]
 
-    assert reservation_ids.index(booking_id) < reservation_ids.index(direct_id)
-    assert reservation_ids.index(direct_id) < reservation_ids.index(belvilla_id)
+    assert reservation_ids.index(belvilla_id) < reservation_ids.index(direct_id)
+    assert reservation_ids.index(direct_id) < reservation_ids.index(booking_id)
 

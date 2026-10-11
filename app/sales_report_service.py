@@ -14,7 +14,7 @@ def generate_sales_report(
 ):
     repository = ReservationRepository(connection)
 
-    reservations = repository.get_confirmed_reservations_by_check_in_between(
+    reservations = repository.get_confirmed_reservations_by_created_at_between(
         start_date=start_date,
         end_date=end_date,
     )

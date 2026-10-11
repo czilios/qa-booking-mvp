@@ -19,7 +19,10 @@ from app.customer_service import create_customer, get_customer, update_customer
 from app.availability_service import AvailabilityService
 from app.bank_statement_service import BankStatementReportService
 from app.bank_transaction_service import list_bank_transactions, sum_bank_transactions,create_bank_transaction
-from app.overall_report_service import generate_overall_report
+from app.overall_report_service import (
+    generate_cash_flow_report,
+    generate_overall_report,
+)
 from app.accounting_report_service import generate_accounting_report, generate_accounting_reports
 from app.sales_report_service import generate_sales_report
 from app.repositories.bank_transaction_repository import BankTransactionRepository
@@ -163,30 +166,26 @@ def overall_report_ui(
     month: int = 7,
     db_connection=Depends(get_db_connection),
 ):
-    if month < 1 or month > 12:
+    if month < 0 or month > 12:
         raise HTTPException(
             status_code=400,
             detail="Invalid month",
         )
 
-    start_date = date(year, month, 1)
-
-    if month == 12:
+    if month == 0:
+        start_date = date(year, 1, 1)
+        end_date = date(year + 1, 1, 1)
+    elif month == 12:
+        start_date = date(year, 12, 1)
         end_date = date(year + 1, 1, 1)
     else:
+        start_date = date(year, month, 1)
         end_date = date(year, month + 1, 1)
 
-    report = generate_overall_report(
+    report = generate_cash_flow_report(
         connection=db_connection,
         start_date=start_date,
         end_date=end_date,
-    )
-
-    reservations = report["reservations"]
-
-    total_amount = sum(
-        Decimal(str(reservation["total_amount"] or 0))
-        for reservation in reservations
     )
 
     return templates.TemplateResponse(
@@ -195,8 +194,9 @@ def overall_report_ui(
         context={
             "year": year,
             "month": month,
-            "reservations": reservations,
-            "total_amount": total_amount,
+            "reservations": report["reservations"],
+            "transactions": report["transactions"],
+            "total_amount": report["total_amount"],
         },
     )
 
@@ -696,7 +696,7 @@ def get_overall_report(
     end_date: date,
     db_connection=Depends(get_db_connection),
 ):
-    return generate_overall_report(
+    return generate_cash_flow_report(
         connection=db_connection,
         start_date=start_date,
         end_date=end_date,
@@ -709,14 +709,17 @@ def overall_report_ui(
     year: int,
     db_connection=Depends(get_db_connection),
 ):
-    if month == 12:
+    if month == 0:
+        start_date = date(year, 1, 1)
+        end_date = date(year + 1, 1, 1)
+    elif month == 12:
         start_date = date(year, 12, 1)
         end_date = date(year + 1, 1, 1)
     else:
         start_date = date(year, month, 1)
         end_date = date(year, month + 1, 1)
 
-    report = generate_overall_report(
+    report = generate_cash_flow_report(
         connection=db_connection,
         start_date=start_date,
         end_date=end_date,
@@ -729,6 +732,7 @@ def overall_report_ui(
             "month": month,
             "year": year,
             "reservations": report["reservations"],
+            "transactions": report["transactions"],
             "total_amount": report["total_amount"],
         },
     )

@@ -5,6 +5,14 @@ from app.repositories.reservation_repository import ReservationRepository
 from app.repositories.payment_repository import PaymentRepository
 
 
+def set_reservation_created_at(db_connection, reservation_id, created_at):
+    with db_connection.cursor() as cursor:
+        cursor.execute(
+            "UPDATE reservations SET created_at = %s WHERE id = %s",
+            (created_at, reservation_id),
+        )
+
+
 def test_sales_report_api_returns_report(
     db_connection,
     api_client,
@@ -25,6 +33,7 @@ def test_sales_report_api_returns_report(
     created_reservation_cleanup["reservation_ids"].append(
         reservation_id
     )
+    set_reservation_created_at(db_connection, reservation_id, date(2031, 10, 10))
 
     response = api_client.get(
         "/api/sales-report",
@@ -80,6 +89,12 @@ def test_sales_report_api_includes_all_sources(
     created_reservation_cleanup["reservation_ids"].extend(
         reservation_ids
     )
+    for reservation_id in reservation_ids:
+        set_reservation_created_at(
+            db_connection,
+            reservation_id,
+            date(2031, 10, 10),
+        )
 
     response = api_client.get(
         "/api/sales-report",
@@ -127,6 +142,12 @@ def test_sales_report_api_returns_total_amount(
     created_reservation_cleanup["reservation_ids"].extend(
         reservation_ids
     )
+    for reservation_id in reservation_ids:
+        set_reservation_created_at(
+            db_connection,
+            reservation_id,
+            date(2031, 10, 10),
+        )
 
     response = api_client.get(
         "/api/sales-report",
@@ -177,6 +198,16 @@ def test_sales_report_api_returns_sales_by_source(
             second_reservation_id,
         ]
     )
+    set_reservation_created_at(
+        db_connection,
+        first_reservation_id,
+        date(2031, 10, 10),
+    )
+    set_reservation_created_at(
+        db_connection,
+        second_reservation_id,
+        date(2031, 10, 15),
+    )
 
     response = api_client.get(
         "/api/sales-report",
@@ -218,6 +249,7 @@ def test_sales_report_api_returns_paid_amount_and_balance(
     created_reservation_cleanup["reservation_ids"].append(
         reservation_id
     )
+    set_reservation_created_at(db_connection, reservation_id, date(2031, 10, 10))
 
     payment_repository = PaymentRepository(db_connection)
 
@@ -315,6 +347,7 @@ def test_sales_report_api_excludes_reservation_outside_date_range(
     created_reservation_cleanup["reservation_ids"].append(
         reservation_id
     )
+    set_reservation_created_at(db_connection, reservation_id, date(2031, 11, 5))
 
     response = api_client.get(
         "/api/sales-report",
@@ -356,6 +389,7 @@ def test_sales_report_api_includes_invoice_number(
     created_reservation_cleanup["reservation_ids"].append(
         reservation_id
     )
+    set_reservation_created_at(db_connection, reservation_id, date(2032, 10, 10))
 
     response = api_client.get(
         "/api/sales-report",
