@@ -71,16 +71,35 @@ def generate_accounting_report(
         for transaction in transactions
         if transaction["source_id"] == DIRECT_SOURCE_ID
     ]
+    accounting_direct_transactions = []
     entries = []
     
     for transaction in direct_transactions:
         payment = payment_repository.get_payment_by_bank_transaction_id(
-        transaction["id"]
-    )
+            transaction["id"]
+        )
 
-        if payment is not None and payment["status"] == "PAID" and payment["invoice"]:
+        payment_has_invoice = (
+            payment is not None
+            and payment["status"] == "PAID"
+            and payment["invoice"]
+        )
+        matching_invoice = False
+        if not payment_has_invoice and transaction["notes"]:
+            reservations = reservation_repository.get_by_invoice_number(
+                transaction["notes"]
+            )
+            matching_invoice = any(
+                reservation["source_id"] == DIRECT_SOURCE_ID
+                and reservation["invoice_number"] == transaction["notes"]
+                and reservation["total_amount"] == transaction["amount"]
+                for reservation in reservations
+            )
+
+        if payment_has_invoice or matching_invoice:
             continue
 
+        accounting_direct_transactions.append(transaction)
         transaction["gross_amount"] = transaction["amount"]
         transaction["net_amount"], transaction["vat_amount"] = calculate_vat_values(
         transaction["gross_amount"]
@@ -135,7 +154,7 @@ def generate_accounting_report(
     total_net, total_vat = calculate_vat_values(total_gross)
             
     return {
-        "transactions": direct_transactions,
+        "transactions": accounting_direct_transactions,
         "booking_reservations": booking_reservations,
         "entries": entries,
         "total_gross": total_gross,

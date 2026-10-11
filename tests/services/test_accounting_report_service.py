@@ -2,6 +2,7 @@ from datetime import date
 from decimal import Decimal
 
 from app.accounting_report_service import generate_accounting_report, generate_accounting_reports
+from app.overall_report_service import generate_cash_flow_report
 from app.repositories.bank_transaction_repository import (
     BankTransactionRepository,
 )
@@ -1087,5 +1088,134 @@ def test_accounting_report_excludes_direct_transaction_with_invoice(
     assert not any(
         entry["gross_amount"] == Decimal("1777.00")
         and entry["source"] == "Direct"
+        for entry in report["entries"]
+    )
+
+
+def test_accounting_report_matches_invoice_number_and_amount_before_excluding_direct(
+    db_connection,
+    created_bank_transaction_cleanup,
+    created_reservation_cleanup,
+):
+    invoice_number = "TEST/EXACT-MATCH/2044"
+    reservation_id = ReservationRepository(db_connection).create(
+        cottage_id=6,
+        source_id=1,
+        check_in=date(2044, 8, 3),
+        check_out=date(2044, 8, 9),
+        guests_count=1,
+        status="CONFIRMED",
+        total_amount=Decimal("1777.00"),
+        accounting_included=True,
+        invoice_number=invoice_number,
+    )
+    bank_repository = BankTransactionRepository(db_connection)
+    transaction_ids = {
+        "matching": bank_repository.create(
+            transaction_date=date(2044, 7, 7),
+            source_id=1,
+            cottage_id=None,
+            amount=Decimal("1777.00"),
+            notes=invoice_number,
+        ),
+        "different_invoice": bank_repository.create(
+            transaction_date=date(2044, 7, 8),
+            source_id=1,
+            cottage_id=None,
+            amount=Decimal("1777.00"),
+            notes="TEST/OTHER-INVOICE/2044",
+        ),
+        "different_amount": bank_repository.create(
+            transaction_date=date(2044, 7, 9),
+            source_id=1,
+            cottage_id=None,
+            amount=Decimal("1000.00"),
+            notes=invoice_number,
+        ),
+    }
+    created_reservation_cleanup["reservation_ids"].append(reservation_id)
+    created_bank_transaction_cleanup.extend(transaction_ids.values())
+
+    report = generate_accounting_report(
+        connection=db_connection,
+        start_date=date(2044, 7, 1),
+        end_date=date(2044, 8, 1),
+    )
+    reported_transaction_ids = {
+        transaction["id"] for transaction in report["transactions"]
+    }
+
+    assert transaction_ids["matching"] not in reported_transaction_ids
+    assert transaction_ids["different_invoice"] in reported_transaction_ids
+    assert transaction_ids["different_amount"] in reported_transaction_ids
+
+
+def test_actual_direct_invoice_transaction_8333_is_excluded_only_from_accounting(
+    db_connection,
+):
+    bank_repository = BankTransactionRepository(db_connection)
+    reservation_repository = ReservationRepository(db_connection)
+    payment_repository = PaymentRepository(db_connection)
+
+    transaction = bank_repository.get_by_id(8333)
+    assert transaction is not None
+    assert transaction["transaction_date"] == date(2026, 7, 7)
+    assert transaction["amount"] == Decimal("1700.00")
+    assert transaction["notes"] == "1/W/2026"
+
+    matching_reservations = reservation_repository.get_by_invoice_number(
+        transaction["notes"]
+    )
+    assert any(
+        reservation["id"] == 16594
+        and reservation["invoice_number"] == transaction["notes"]
+        and reservation["total_amount"] == transaction["amount"]
+        for reservation in matching_reservations
+    )
+    assert payment_repository.get_payment_by_bank_transaction_id(8333) is None
+
+    accounting_report = generate_accounting_report(
+        connection=db_connection,
+        start_date=date(2026, 7, 1),
+        end_date=date(2026, 8, 1),
+    )
+    assert not any(
+        accounting_transaction["id"] == 8333
+        for accounting_transaction in accounting_report["transactions"]
+    )
+    assert not any(
+        entry.get("transaction_id") == 8333
+        for entry in accounting_report["entries"]
+    )
+
+    cash_flow_report = generate_cash_flow_report(
+        connection=db_connection,
+        start_date=date(2026, 7, 1),
+        end_date=date(2026, 8, 1),
+    )
+    assert any(
+        cash_flow_transaction["id"] == 8333
+        for cash_flow_transaction in cash_flow_report["transactions"]
+    )
+
+
+def test_actual_booking_6431_is_accounted_in_check_in_month(db_connection):
+    report = generate_accounting_report(
+        connection=db_connection,
+        start_date=date(2026, 7, 1),
+        end_date=date(2026, 8, 1),
+    )
+
+    booking = next(
+        booking
+        for booking in report["booking_reservations"]
+        if booking["id"] == 6431
+    )
+    assert booking["check_in"] == date(2026, 7, 31)
+    assert booking["total_amount"] == Decimal("899.10")
+    assert any(
+        entry.get("reservation_id") == 6431
+        and entry["date"] == date(2026, 7, 31)
+        and entry["gross_amount"] == Decimal("899.10")
         for entry in report["entries"]
     )

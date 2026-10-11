@@ -5,34 +5,11 @@
 {% endblock %}
 
 {% block content %}
-<!DOCTYPE html>
-<html lang="pl">
-
-<head>
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>Raport ogólny - Wrzosowo 159</title>
-
-    <link
-        rel="stylesheet"
-        href="{{ url_for('static', path='styles.css') }}"
-    >
-</head>
-
-<body>
-
 <div class="container report-container">
-
-    <h1>Wrzosowo 159</h1>
 
     <h2>Raport ogólny</h2>
 
-    <form method="get" action="/ui/reports/overall">
+    <form class="report-period-filter" method="get" action="/ui/reports/overall">
 
         <div class="form-group">
 
@@ -128,6 +105,10 @@
         </button>
 
     </form>
+
+    <div class="report-actions">
+        <button type="button" class="generate-pdf-button" onclick="window.print()">GENERUJ PDF</button>
+    </div>
 
 
     {% if reservations is not none %}
@@ -249,7 +230,4 @@
 
 </div>
 
-</body>
-
-</html>
 {% endblock %}

@@ -943,22 +943,32 @@ def accounting_report_ui(
     end_year: int | None = None,
     db_connection=Depends(get_db_connection),
 ):
-    if month < 1 or month > 12:
+    if month < 0 or month > 12:
         raise HTTPException(
             status_code=400,
             detail="Invalid month",
         )
 
-    if start_month is not None:
-        if (
-        start_year is None
-        or end_month is None
-        or end_year is None
-       ):
+    has_custom_range = any(
+        value is not None
+        for value in (start_month, start_year, end_month, end_year)
+    )
+
+    if has_custom_range:
+        if any(
+            value is None
+            for value in (start_month, start_year, end_month, end_year)
+        ):
             raise HTTPException(
-            status_code=400,
-            detail="Complete date range is required",
-        )
+                status_code=400,
+                detail="Complete date range is required",
+            )
+
+        if not 1 <= start_month <= 12 or not 1 <= end_month <= 12:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid month in date range",
+            )
 
         report_start_date = date(start_year, start_month, 1)
         if end_month == 12:
@@ -969,6 +979,10 @@ def accounting_report_ui(
                 end_month + 1,
                 1,
             )
+
+    elif month == 0:
+        report_start_date = date(year, 1, 1)
+        report_end_date = date(year + 1, 1, 1)
     else:
         report_start_date = date(year, month, 1)
 
@@ -988,5 +1002,12 @@ def accounting_report_ui(
         name="accounting_report.html",
         context={
             "reports": reports,
+            "month": month,
+            "year": year,
+            "start_month": start_month if start_month is not None else month,
+            "start_year": start_year if start_year is not None else year,
+            "end_month": end_month if end_month is not None else month,
+            "end_year": end_year if end_year is not None else year,
+            "years": sorted({2026, 2027, year, start_year, end_year} - {None}),
         },
     )

@@ -1,64 +1,228 @@
-<!DOCTYPE html>
-<html lang="pl">
-<head>
-    <meta charset="UTF-8">
-    <title>Ewidencja sprzedaży</title>
-</head>
-<body>
+{% extends "base.html" %}
 
-{% for report in reports %}
+{% block title %}
+    Ewidencja sprzedaży - Wrzosowo 159
+{% endblock %}
 
-    <div class="report-page">
+{% block content %}
+<div class="container report-container accounting-report">
+    <h2>Ewidencja sprzedaży</h2>
 
-    <h1>Ewidencja sprzedaży — {{ report.month_name }} {{ report.year }}</h1>
+    <form class="report-period-filter" method="get" action="/ui/reports/accounting">
+        <div class="form-group">
+            <label for="month">Miesiąc</label>
+            <select id="month" name="month" required>
+                <option value="0" {% if month == 0 %}selected{% endif %}>Cały rok</option>
+                <option value="1" {% if month == 1 %}selected{% endif %}>Styczeń</option>
+                <option value="2" {% if month == 2 %}selected{% endif %}>Luty</option>
+                <option value="3" {% if month == 3 %}selected{% endif %}>Marzec</option>
+                <option value="4" {% if month == 4 %}selected{% endif %}>Kwiecień</option>
+                <option value="5" {% if month == 5 %}selected{% endif %}>Maj</option>
+                <option value="6" {% if month == 6 %}selected{% endif %}>Czerwiec</option>
+                <option value="7" {% if month == 7 %}selected{% endif %}>Lipiec</option>
+                <option value="8" {% if month == 8 %}selected{% endif %}>Sierpień</option>
+                <option value="9" {% if month == 9 %}selected{% endif %}>Wrzesień</option>
+                <option value="10" {% if month == 10 %}selected{% endif %}>Październik</option>
+                <option value="11" {% if month == 11 %}selected{% endif %}>Listopad</option>
+                <option value="12" {% if month == 12 %}selected{% endif %}>Grudzień</option>
+            </select>
+        </div>
 
-        <table>
-            <thead>
-                <tr>
-                    <th>Data</th>
-                    <th>Źródło</th>
-                    <th>Kwota brutto</th>
-                    <th>Netto</th>
-                    <th>VAT</th>
-                    <th>Uwagi</th>
-                </tr>
-            </thead>
-
-            <tbody>
-               {% for entry in report.entries %}
-                <tr>
-                    <td>{{ entry.date }}</td>
-                    <td>{{ entry.source }}</td>
-                    <td>{{ entry.gross_amount }}</td>
-                    <td>{{ entry.net_amount }}</td>
-                    <td>{{ entry.vat_amount }}</td>
-                    <td></td>
-                </tr>
+        <div class="form-group">
+            <label for="year">Rok</label>
+            <select id="year" name="year" required>
+                {% for available_year in years %}
+                    <option value="{{ available_year }}" {% if year == available_year %}selected{% endif %}>
+                        {{ available_year }}
+                    </option>
                 {% endfor %}
-            </tbody>
-        </table>
-
-        <h2>Suma {{ report.month_name_genitive }}</h2>
-
-        <div>Brutto: {{ report.total_gross }}</div>
-        <div>Netto: {{ report.total_net }}</div>
-        <div>VAT: {{ report.total_vat }}</div>
-
-        <div>
-            Z przeniesienia: {{ report.carry_amount }}
+            </select>
         </div>
 
-        <div>
-            RAZEM: {{ report.grand_total }}
-        </div>
+        <button type="submit">POKAŻ RAPORT</button>
+    </form>
 
-        <div>
-            Strona {{ loop.index }} z {{ reports | length }}
+    <form class="report-period-filter" method="get" action="/ui/reports/accounting">
+        <h3>Zakres niestandardowy</h3>
+        <div class="form-group">
+            <label for="start_month">Od miesiąca</label>
+            <select id="start_month" name="start_month" required>
+                <option value="1" {% if start_month == 1 %}selected{% endif %}>Styczeń</option>
+                <option value="2" {% if start_month == 2 %}selected{% endif %}>Luty</option>
+                <option value="3" {% if start_month == 3 %}selected{% endif %}>Marzec</option>
+                <option value="4" {% if start_month == 4 %}selected{% endif %}>Kwiecień</option>
+                <option value="5" {% if start_month == 5 %}selected{% endif %}>Maj</option>
+                <option value="6" {% if start_month == 6 %}selected{% endif %}>Czerwiec</option>
+                <option value="7" {% if start_month == 7 %}selected{% endif %}>Lipiec</option>
+                <option value="8" {% if start_month == 8 %}selected{% endif %}>Sierpień</option>
+                <option value="9" {% if start_month == 9 %}selected{% endif %}>Wrzesień</option>
+                <option value="10" {% if start_month == 10 %}selected{% endif %}>Październik</option>
+                <option value="11" {% if start_month == 11 %}selected{% endif %}>Listopad</option>
+                <option value="12" {% if start_month == 12 %}selected{% endif %}>Grudzień</option>
+            </select>
         </div>
+        <div class="form-group">
+            <label for="start_year">Rok początkowy</label>
+            <select id="start_year" name="start_year" required>
+                {% for available_year in years %}
+                    <option value="{{ available_year }}" {% if start_year == available_year %}selected{% endif %}>{{ available_year }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="end_month">Do miesiąca</label>
+            <select id="end_month" name="end_month" required>
+                <option value="1" {% if end_month == 1 %}selected{% endif %}>Styczeń</option>
+                <option value="2" {% if end_month == 2 %}selected{% endif %}>Luty</option>
+                <option value="3" {% if end_month == 3 %}selected{% endif %}>Marzec</option>
+                <option value="4" {% if end_month == 4 %}selected{% endif %}>Kwiecień</option>
+                <option value="5" {% if end_month == 5 %}selected{% endif %}>Maj</option>
+                <option value="6" {% if end_month == 6 %}selected{% endif %}>Czerwiec</option>
+                <option value="7" {% if end_month == 7 %}selected{% endif %}>Lipiec</option>
+                <option value="8" {% if end_month == 8 %}selected{% endif %}>Sierpień</option>
+                <option value="9" {% if end_month == 9 %}selected{% endif %}>Wrzesień</option>
+                <option value="10" {% if end_month == 10 %}selected{% endif %}>Październik</option>
+                <option value="11" {% if end_month == 11 %}selected{% endif %}>Listopad</option>
+                <option value="12" {% if end_month == 12 %}selected{% endif %}>Grudzień</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="end_year">Rok końcowy</label>
+            <select id="end_year" name="end_year" required>
+                {% for available_year in years %}
+                    <option value="{{ available_year }}" {% if end_year == available_year %}selected{% endif %}>{{ available_year }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit">POKAŻ ZAKRES</button>
+    </form>
 
+    <div class="report-actions">
+        <button type="button" class="generate-pdf-button" onclick="window.print()">GENERUJ PDF</button>
     </div>
 
-{% endfor %}
+    {% if reports %}
+    {% for report in reports %}
+        <section class="report-page">
+            <div class="print-report-heading">
+                <h1>EWIDENCJA SPRZEDAŻY</h1>
+                <h2>{{ report.month_name | upper }} {{ report.year }}</h2>
+            </div>
 
-</body>
-</html>
+            <div class="report-summary screen-only">
+                <div class="report-summary-card">
+                    <span class="label">Liczba pozycji</span>
+                    <strong>{{ report.entries | length }}</strong>
+                </div>
+
+                <div class="report-summary-card">
+                    <span class="label">Sprzedaż brutto</span>
+                    <strong>{{ "{:,.2f}".format(report.total_gross).replace(",", " ").replace(".", ",") }} zł</strong>
+                </div>
+            </div>
+
+            <div class="report-results">
+                <h2 class="screen-only">Ewidencja sprzedaży — {{ report.month_name }} {{ report.year }}</h2>
+
+                <div class="report-table-wrapper">
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Źródło</th>
+                                <th>Kwota brutto</th>
+                                <th>Netto</th>
+                                <th>VAT</th>
+                                <th>Uwagi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in report.entries %}
+                                <tr>
+                                    <td>{{ entry.date }}</td>
+                                    <td>{{ entry.source }}</td>
+                                    <td>{{ "{:,.2f}".format(entry.gross_amount).replace(",", " ").replace(".", ",") }} zł</td>
+                                    <td>{{ "{:,.2f}".format(entry.net_amount).replace(",", " ").replace(".", ",") }} zł</td>
+                                    <td>{{ "{:,.2f}".format(entry.vat_amount).replace(",", " ").replace(".", ",") }} zł</td>
+                                    <td></td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th colspan="2">SUMA</th>
+                                <th>{{ "{:,.2f}".format(report.total_gross).replace(",", " ") }}</th>
+                                <th>{{ "{:,.2f}".format(report.total_net).replace(",", " ") }}</th>
+                                <th>{{ "{:,.2f}".format(report.total_vat).replace(",", " ") }}</th>
+                                <th></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="report-summary screen-only">
+                    <div class="report-summary-card">
+                        <span class="label">Suma {{ report.month_name_genitive }} — brutto</span>
+                        <strong>{{ "{:,.2f}".format(report.total_gross).replace(",", " ").replace(".", ",") }} zł</strong>
+                    </div>
+                    <div class="report-summary-card">
+                        <span class="label">Netto</span>
+                        <strong>{{ "{:,.2f}".format(report.total_net).replace(",", " ").replace(".", ",") }} zł</strong>
+                    </div>
+                    <div class="report-summary-card">
+                        <span class="label">VAT</span>
+                        <strong>{{ "{:,.2f}".format(report.total_vat).replace(",", " ").replace(".", ",") }} zł</strong>
+                    </div>
+                </div>
+
+                <div class="report-summary screen-only">
+                    <div class="report-summary-card">
+                        <span class="label">Z przeniesienia</span>
+                        <strong>{{ "{:,.2f}".format(report.carry_amount).replace(",", " ").replace(".", ",") }} zł</strong>
+                    </div>
+                    <div class="report-summary-card">
+                        <span class="label">RAZEM</span>
+                        <strong>{{ "{:,.2f}".format(report.grand_total).replace(",", " ").replace(".", ",") }} zł</strong>
+                    </div>
+                </div>
+
+                <table class="print-summary">
+                    <thead>
+                        <tr><th>Podsumowanie</th><th>Kwota</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Brutto bieżącego miesiąca</td>
+                            <td>{{ "{:,.2f}".format(report.total_gross).replace(",", " ") }} zł</td>
+                        </tr>
+                        <tr>
+                            <td>Netto</td>
+                            <td>{{ "{:,.2f}".format(report.total_net).replace(",", " ") }} zł</td>
+                        </tr>
+                        <tr>
+                            <td>VAT</td>
+                            <td>{{ "{:,.2f}".format(report.total_vat).replace(",", " ") }} zł</td>
+                        </tr>
+                        <tr>
+                            <td>Z przeniesienia</td>
+                            <td>{{ "{:,.2f}".format(report.carry_amount).replace(",", " ") }} zł</td>
+                        </tr>
+                        <tr class="print-summary-total">
+                            <th>RAZEM</th>
+                            <th>{{ "{:,.2f}".format(report.grand_total).replace(",", " ") }} zł</th>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p class="print-page-number">Strona {{ loop.index }} z {{ reports | length }}</p>
+            </div>
+        </section>
+    {% endfor %}
+    {% else %}
+        <div class="no-availability report-empty-state">
+            <strong>Brak danych dla wybranego zakresu</strong>
+            <p>W wybranym okresie nie ma miesięcy do wyświetlenia.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

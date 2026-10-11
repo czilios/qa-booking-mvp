@@ -23,13 +23,17 @@
 
 <body>
 
-<nav class="main-nav">
+<header class="site-header">
+    <a href="/ui" class="site-logo-link" aria-label="Wrzosowo 159 — strona główna">
+        <img
+            src="{{ url_for('static', path='images/logo.png') }}"
+            alt="Wrzosowo 159"
+            class="site-logo"
+        >
+    </a>
+</header>
 
-    <div class="nav-brand">
-        <a href="/ui">
-            Wrzosowo 159
-        </a>
-    </div>
+<nav class="main-nav">
 
     <div class="nav-section">
 
@@ -69,7 +73,7 @@
             Raport ogólny
         </a>
 
-        <a href="#">
+        <a href="/ui/reports/accounting">
             Raport księgowy
         </a>
 

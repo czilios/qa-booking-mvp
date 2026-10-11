@@ -2,32 +2,11 @@
 
 {% block title %}
     Wpływy - Wrzosowo 159
-<!DOCTYPE html>
-<html lang="pl">
+{% endblock %}
 
-<head>
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>Wpływy - Wrzosowo 159</title>
-
-    <link
-        rel="stylesheet"
-        href="{{ url_for('static', path='styles.css') }}"
-    >
-</head>
-
-<body>
+{% block content %}
 
 <div class="container">
-
-    <h1>Wrzosowo 159</h1>
-
-    <h2>Bank Transactions</h2>
 
     <h2>Dodaj wpływ</h2>
 
@@ -258,8 +237,5 @@
     {% endif %}
 
 </div>
-
-</body>
-</html>
 
 {% endblock %}
