@@ -901,18 +901,22 @@ def sales_report_ui(
     year: int = 2026,
     db_connection=Depends(get_db_connection),
 ):
-    if month < 1 or month > 12:
+    if month < 0 or month > 12:
         raise HTTPException(
             status_code=400,
             detail="Invalid month",
         )
 
-    start_date = date(year, month, 1)
-
-    if month == 12:
+    if month == 0:
+        start_date = date(year, 1, 1)
         end_date = date(year + 1, 1, 1)
     else:
-        end_date = date(year, month + 1, 1)
+        start_date = date(year, month, 1)
+
+        if month == 12:
+            end_date = date(year + 1, 1, 1)
+        else:
+            end_date = date(year, month + 1, 1)
 
     report = generate_sales_report(
         connection=db_connection,
@@ -926,6 +930,7 @@ def sales_report_ui(
         context={
             "month": month,
             "year": year,
+            "years": sorted({2026, 2027, year}),
             "reservations": report["reservations"],
             "total_amount": report["total_amount"],
             "by_source": report["by_source"],

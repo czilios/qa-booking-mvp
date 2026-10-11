@@ -5,130 +5,110 @@
 {% endblock %}
 
 {% block content %}
-
 <div class="container report-container">
-
     <h2>Raport sprzedaży</h2>
+
+    <form class="report-period-filter" method="get" action="/ui/reports/sales">
+        <div class="form-group">
+            <label for="month">Miesiąc sprzedaży</label>
+            <select id="month" name="month" required>
+                <option value="0" {% if month == 0 %}selected{% endif %}>Cały rok</option>
+                <option value="1" {% if month == 1 %}selected{% endif %}>Styczeń</option>
+                <option value="2" {% if month == 2 %}selected{% endif %}>Luty</option>
+                <option value="3" {% if month == 3 %}selected{% endif %}>Marzec</option>
+                <option value="4" {% if month == 4 %}selected{% endif %}>Kwiecień</option>
+                <option value="5" {% if month == 5 %}selected{% endif %}>Maj</option>
+                <option value="6" {% if month == 6 %}selected{% endif %}>Czerwiec</option>
+                <option value="7" {% if month == 7 %}selected{% endif %}>Lipiec</option>
+                <option value="8" {% if month == 8 %}selected{% endif %}>Sierpień</option>
+                <option value="9" {% if month == 9 %}selected{% endif %}>Wrzesień</option>
+                <option value="10" {% if month == 10 %}selected{% endif %}>Październik</option>
+                <option value="11" {% if month == 11 %}selected{% endif %}>Listopad</option>
+                <option value="12" {% if month == 12 %}selected{% endif %}>Grudzień</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="year">Rok</label>
+            <select id="year" name="year" required>
+                {% for available_year in years %}
+                    <option value="{{ available_year }}" {% if year == available_year %}selected{% endif %}>{{ available_year }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit">POKAŻ RAPORT</button>
+    </form>
 
     <div class="report-actions">
         <button type="button" class="generate-pdf-button" onclick="window.print()">GENERUJ PDF</button>
     </div>
 
     <div class="report-summary">
-
         <div class="report-summary-card">
-
-            <span class="label">
-                Liczba pobytów
-            </span>
-
-            <strong>
-                {{ reservations | length }}
-            </strong>
-
+            <span class="label">Liczba rezerwacji</span>
+            <strong>{{ reservations | length }}</strong>
         </div>
-
         <div class="report-summary-card">
-
-            <span class="label">
-                Łączna wartość
-            </span>
-
-            <strong>
-                {{ "{:,.2f}".format(total_amount).replace(",", " ").replace(".", ",") }} zł
-            </strong>
-
+            <span class="label">Łączna wartość rezerwacji</span>
+            <strong>{{ "{:,.2f}".format(total_amount).replace(",", " ").replace(".", ",") }} zł</strong>
         </div>
-
     </div>
+
     {% if reservations %}
-
         <div class="report-results">
-
             <h2>Rezerwacje</h2>
-
             <div class="report-table-wrapper">
-
                 <table class="report-table">
-
                     <thead>
                         <tr>
                             <th>ID</th>
                             <th>Domek</th>
+                            <th>Data sprzedaży</th>
+                            <th>Telefon</th>
                             <th>Źródło</th>
+                            <th>Status</th>
                             <th>Przyjazd</th>
                             <th>Wyjazd</th>
-                            <th>Kwota</th>
+                            <th>Kwota rezerwacji</th>
                             <th>Zapłacono</th>
                             <th>Pozostało</th>
                             <th>Faktura</th>
                         </tr>
                     </thead>
-
                     <tbody>
-
                         {% for reservation in reservations %}
-
-                            <tr>
-
+                            <tr data-reservation-id="{{ reservation.id }}">
+                                <td>{{ reservation.id }}</td>
+                                <td>Domek {{ reservation.cottage_id }}</td>
+                                <td>{{ reservation.created_at.strftime("%Y-%m-%d") }}</td>
+                                <td>{{ reservation.phone or "—" }}</td>
                                 <td>
-                                    {{ reservation.id }}
+                                    {% if reservation.source_code == "DIRECT" %}
+                                        Direct
+                                    {% elif reservation.source_code == "BOOKING" %}
+                                        Booking
+                                    {% elif reservation.source_code == "BELVILLA" %}
+                                        Belvilla
+                                    {% else %}
+                                        {{ reservation.source_name }}
+                                    {% endif %}
                                 </td>
-
-                                <td>
-                                    {{ reservation.cottage_id }}
-                                </td>
-
-                                <td>
-                                    {{ reservation.source_name }}
-                                </td>
-
-                                <td>
-                                    {{ reservation.check_in }}
-                                </td>
-
-                                <td>
-                                    {{ reservation.check_out }}
-                                </td>
-
-                                <td>
-                                    {{ "{:,.2f}".format(reservation.total_amount).replace(",", " ").replace(".", ",") }} zł
-                                </td>
-                                <td>
-                                    {{ "{:,.2f}".format(reservation.total_amount or 0).replace(",", " ").replace(".", ",") }} zł
-                                </td>
-
-                                <td>
-                                    {{ "{:,.2f}".format(reservation.paid_amount or 0).replace(",", " ").replace(".", ",") }} zł
-                                </td>
-
-                                <td>
-                                    {{ "{:,.2f}".format(reservation.balance or 0).replace(",", " ").replace(".", ",") }} zł
-                                </td>
-                                <td>
-                                    {{ reservation.invoice_number or "—" }}
-                                </td>
-
+                                <td>{{ reservation.status }}</td>
+                                <td>{{ reservation.check_in }}</td>
+                                <td>{{ reservation.check_out }}</td>
+                                <td>{{ "{:,.2f}".format(reservation.total_amount or 0).replace(",", " ").replace(".", ",") }} zł</td>
+                                <td>{{ "{:,.2f}".format(reservation.paid_amount or 0).replace(",", " ").replace(".", ",") }} zł</td>
+                                <td>{{ "{:,.2f}".format(reservation.balance or 0).replace(",", " ").replace(".", ",") }} zł</td>
+                                <td>{{ reservation.invoice_number or "—" }}</td>
                             </tr>
-
                         {% endfor %}
-
                     </tbody>
-
                 </table>
-
             </div>
-
         </div>
-
     {% else %}
-
         <div class="no-availability">
             <strong>Brak rezerwacji</strong>
         </div>
-
     {% endif %}
-
 </div>
-
 {% endblock %}
