@@ -23,6 +23,7 @@ class ReservationRepository:
         commission_amount: Decimal | None = None,
         invoice_number: str | None = None,
         external_reservation_id: str | None = None,
+        is_test_data: bool = False,
     ) -> int:
         with self.connection.cursor() as cursor:
             cursor.execute(
@@ -41,9 +42,10 @@ class ReservationRepository:
                     notes,
                     commission_amount,
                     invoice_number,
-                    external_reservation_id
+                    external_reservation_id,
+                    is_test_data
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     cottage_id,
@@ -60,6 +62,7 @@ class ReservationRepository:
                     commission_amount,
                     invoice_number,
                     external_reservation_id,
+                    is_test_data,
                 ),
             )
 
@@ -78,6 +81,7 @@ class ReservationRepository:
                     check_out,
                     guests_count,
                     status,
+                    is_test_data,
                     expires_at,
                     total_amount,
                     accounting_included,
@@ -392,6 +396,7 @@ class ReservationRepository:
                     r.check_out,
                     r.guests_count,
                     r.status,
+                    r.is_test_data,
                     r.total_amount,
                     r.commission_amount,
                     r.accounting_included,
@@ -406,6 +411,7 @@ class ReservationRepository:
                 LEFT JOIN customers c
                     ON c.id = r.customer_id
                 WHERE r.status = 'CONFIRMED'
+                  AND r.is_test_data = FALSE
                   AND r.created_at >= %s
                   AND r.created_at < %s
                 ORDER BY r.created_at, r.id

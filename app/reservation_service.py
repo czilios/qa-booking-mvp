@@ -58,6 +58,7 @@ def create_reservation(
     customer_id: int | None = None,
     total_amount: Decimal | None = None,
     accounting_included: bool = False,
+    is_test_data: bool = False,
 ) -> int:
     reservation_repository = ReservationRepository(connection)
 
@@ -93,7 +94,8 @@ def create_reservation(
         customer_id=customer_id,
         total_amount=total_amount,
         accounting_included=accounting_included,
-)
+        is_test_data=is_test_data,
+    )
 
 def update_reservation(
     connection: Connection,
@@ -202,6 +204,7 @@ def create_historical_reservation(
     customer_id: int | None = None,
     notes: str | None = None,
     commission_amount: Decimal | None = None,
+    is_test_data: bool = False,
 ) -> int:
     reservation_repository = ReservationRepository(connection)
 
@@ -219,4 +222,5 @@ def create_historical_reservation(
         accounting_included=accounting_included,
         notes=notes,
         commission_amount=commission_amount,
+        is_test_data=is_test_data,
     )

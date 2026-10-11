@@ -1,7 +1,34 @@
 import pytest
+import inspect
 
 from app.database import get_connection
+from app.repositories.reservation_repository import ReservationRepository
 
+
+@pytest.fixture(autouse=True)
+def mark_repository_created_reservations_as_test_data(monkeypatch):
+    original_create = ReservationRepository.create
+    sig = inspect.signature(original_create)
+
+    def create_test_reservation(repository, *args, **kwargs):
+        # Bindujemy przekazane argumenty do sygnatury metody create
+        bound_args = sig.bind(repository, *args, **kwargs)
+        bound_args.apply_defaults()
+        
+        # Jeśli is_test_data nie zostało jawnie przekazane (lub ma wartość domyślną z metody, np. False)
+        # i chcemy wymusić w testach True:
+        if bound_args.arguments.get('is_test_data') is not False:
+            kwargs['is_test_data'] = True
+        else:
+            kwargs['is_test_data'] = False
+
+        return original_create(repository, *args, **kwargs)
+
+    monkeypatch.setattr(
+        ReservationRepository,
+        "create",
+        create_test_reservation,
+    )
 
 @pytest.fixture
 def db_connection():

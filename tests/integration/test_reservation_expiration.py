@@ -16,9 +16,10 @@ def test_pending_reservation_expires_after_expiration_time(
                 check_out,
                 guests_count,
                 status,
-                expires_at
+                expires_at,
+                is_test_data
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)
             """,
             (
                 1,
@@ -67,9 +68,10 @@ def test_pending_reservation_does_not_expire_before_expiration_time(
                 check_out,
                 guests_count,
                 status,
-                expires_at
+                expires_at,
+                is_test_data
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)
             """,
             (
                 1,
@@ -118,9 +120,10 @@ def test_pending_reservation_expires_exactly_at_expiration_time(
                 check_out,
                 guests_count,
                 status,
-                expires_at
+                expires_at,
+                is_test_data
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)
             """,
             (
                 1,
@@ -169,9 +172,10 @@ def test_confirmed_reservation_is_not_expired(
                 check_out,
                 guests_count,
                 status,
-                expires_at
+                expires_at,
+                is_test_data
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)
             """,
             (
                 1,
@@ -219,9 +223,10 @@ def test_expired_reservation_no_longer_blocks_cottage(
                 check_out,
                 guests_count,
                 status,
-                expires_at
+                expires_at,
+                is_test_data
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE)
             """,
             (
                 1,

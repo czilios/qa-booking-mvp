@@ -29,6 +29,7 @@ def test_sales_report_ui_returns_200(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
+        is_test_data=False,
     )
 
     created_reservation_cleanup["reservation_ids"].append(
@@ -65,6 +66,7 @@ def test_sales_report_ui_displays_reservation(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
+        is_test_data=False,
     )
 
     created_reservation_cleanup["reservation_ids"].append(
@@ -114,6 +116,7 @@ def test_sales_report_ui_displays_sales_by_source(
             guests_count=2,
             status="CONFIRMED",
             total_amount=amount,
+            is_test_data=False,
         )
 
         reservation_ids.append(reservation_id)
@@ -209,6 +212,7 @@ def test_sales_report_ui_shows_reservation_details_and_optional_phone(
             guests_count=2,
             status="CONFIRMED",
             total_amount=reservation["amount"],
+            is_test_data=False,
         )
         set_reservation_created_at(
             db_connection,
@@ -271,6 +275,7 @@ def test_sales_report_ui_displays_full_year_by_reservation_creation_date(
             guests_count=2,
             status="CONFIRMED",
             total_amount=Decimal("1000.00"),
+            is_test_data=False,
         )
         set_reservation_created_at(db_connection, reservation_id, created_at)
         reservation_ids.append(reservation_id)
@@ -303,6 +308,7 @@ def test_sales_report_ui_displays_paid_amount_and_balance(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
+        is_test_data=False,
     )
 
     created_reservation_cleanup["reservation_ids"].append(
@@ -365,6 +371,7 @@ def test_reservation_stores_invoice_number(
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
         invoice_number="FV/2032/001",
+        is_test_data=False,
     )
 
     created_reservation_cleanup["reservation_ids"].append(
@@ -391,10 +398,17 @@ def test_sales_report_ui_displays_invoice_number(
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
         invoice_number="FV/2032/001",
+        is_test_data=False,
     )
 
     created_reservation_cleanup["reservation_ids"].append(
         reservation_id
+    )
+
+    set_reservation_created_at(
+        db_connection,
+        reservation_id,
+        datetime(2032, 10, 5, 12, 0),
     )
 
     response = api_client.get(

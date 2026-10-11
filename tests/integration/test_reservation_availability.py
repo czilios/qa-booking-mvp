@@ -12,7 +12,8 @@ def test_pending_reservation_blocks_cottage(db_connection):
                 check_in,
                 check_out,
                 guests_count,
-                status
+                status,
+                is_test_data
             )
             VALUES (
                 1,
@@ -20,7 +21,8 @@ def test_pending_reservation_blocks_cottage(db_connection):
                 %s,
                 %s,
                 %s,
-                %s
+                %s,
+                TRUE
             )
             """,
             (
@@ -69,7 +71,8 @@ def test_reservation_ending_on_new_check_in_does_not_block_cottage(
                 check_in,
                 check_out,
                 guests_count,
-                status
+                status,
+                is_test_data
             )
             VALUES (
                 1,
@@ -77,7 +80,8 @@ def test_reservation_ending_on_new_check_in_does_not_block_cottage(
                 %s,
                 %s,
                 %s,
-                %s
+                %s,
+                TRUE
             )
             """,
             (
@@ -130,7 +134,8 @@ def test_overlapping_reservation_blocks_cottage(
                 check_in,
                 check_out,
                 guests_count,
-                status
+                status,
+                is_test_data
             )
             VALUES (
                 1,
@@ -138,7 +143,8 @@ def test_overlapping_reservation_blocks_cottage(
                 %s,
                 %s,
                 %s,
-                %s
+                %s,
+                TRUE
             )
             """,
             (
@@ -216,7 +222,8 @@ def test_block_and_confirmed_reservation_both_block_cottage(
                 check_in,
                 check_out,
                 guests_count,
-                status
+                status,
+                is_test_data
             )
             VALUES (
                 %s,
@@ -224,7 +231,8 @@ def test_block_and_confirmed_reservation_both_block_cottage(
                 %s,
                 %s,
                 %s,
-                %s
+                %s,
+                TRUE
             )
             """,
             (
@@ -303,9 +311,10 @@ def test_find_available_cottages_returns_only_available_cottages(
                 check_in,
                 check_out,
                 guests_count,
-                status
+                status,
+                is_test_data
             )
-            VALUES (%s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, TRUE)
             """,
             (
                 1,
@@ -326,9 +335,10 @@ def test_find_available_cottages_returns_only_available_cottages(
                 check_in,
                 check_out,
                 guests_count,
-                status
+                status,
+                is_test_data
             )
-            VALUES (%s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, TRUE)
             """,
             (
                 2,
@@ -368,9 +378,10 @@ def test_find_available_cottages_returns_only_available_cottages(
                 check_in,
                 check_out,
                 guests_count,
-                status
+                status,
+                is_test_data
             )
-            VALUES (%s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, TRUE)
             """,
             (
                 5,
@@ -446,9 +457,10 @@ def test_cancelled_reservation_does_not_block_cottage(db_connection):
                 check_in,
                 check_out,
                 guests_count,
-                status
+                status,
+                is_test_data
             )
-            VALUES (%s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, TRUE)
             """,
             (
                 1,
@@ -497,9 +509,10 @@ def test_expired_reservation_does_not_block_cottage(db_connection):
                 check_in,
                 check_out,
                 guests_count,
-                status
+                status,
+                is_test_data
             )
-            VALUES (%s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, TRUE)
             """,
             (
                 1,

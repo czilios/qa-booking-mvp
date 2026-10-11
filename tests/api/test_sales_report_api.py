@@ -28,6 +28,7 @@ def test_sales_report_api_returns_report(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
+        is_test_data=False,
     )
 
     created_reservation_cleanup["reservation_ids"].append(
@@ -82,6 +83,7 @@ def test_sales_report_api_includes_all_sources(
             guests_count=2,
             status="CONFIRMED",
             total_amount=Decimal("1000.00"),
+            is_test_data=False,
         )
 
         reservation_ids.append(reservation_id)
@@ -135,6 +137,7 @@ def test_sales_report_api_returns_total_amount(
             guests_count=2,
             status="CONFIRMED",
             total_amount=amount,
+            is_test_data=False,
         )
 
         reservation_ids.append(reservation_id)
@@ -180,6 +183,7 @@ def test_sales_report_api_returns_sales_by_source(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
+        is_test_data=False,
     )
 
     second_reservation_id = repository.create(
@@ -190,6 +194,7 @@ def test_sales_report_api_returns_sales_by_source(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1500.00"),
+        is_test_data=False,
     )
 
     created_reservation_cleanup["reservation_ids"].extend(
@@ -244,6 +249,7 @@ def test_sales_report_api_returns_paid_amount_and_balance(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
+        is_test_data=False,
     )
 
     created_reservation_cleanup["reservation_ids"].append(
@@ -302,6 +308,7 @@ def test_sales_report_api_excludes_cancelled_reservation(
         guests_count=2,
         status="CANCELLED",
         total_amount=Decimal("1000.00"),
+        is_test_data=False,
     )
 
     created_reservation_cleanup["reservation_ids"].append(
@@ -342,6 +349,7 @@ def test_sales_report_api_excludes_reservation_outside_date_range(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
+        is_test_data=False,
     )
 
     created_reservation_cleanup["reservation_ids"].append(
@@ -384,6 +392,7 @@ def test_sales_report_api_includes_invoice_number(
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
         invoice_number="FV/2032/001",
+        is_test_data=False,
     )
 
     created_reservation_cleanup["reservation_ids"].append(

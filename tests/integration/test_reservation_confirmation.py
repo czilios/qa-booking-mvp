@@ -15,9 +15,10 @@ def test_paid_deposit_confirms_pending_reservation(db_connection):
                 check_in,
                 check_out,
                 guests_count,
-                status
+                status,
+                is_test_data
             )
-            VALUES (%s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, TRUE)
             """,
             (
                 1,
@@ -81,9 +82,10 @@ def test_unpaid_deposit_does_not_confirm_reservation(db_connection):
                 check_in,
                 check_out,
                 guests_count,
-                status
+                status,
+                is_test_data
             )
-            VALUES (%s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, TRUE)
             """,
             (
                 1,
@@ -145,9 +147,10 @@ def test_missing_deposit_does_not_confirm_reservation(db_connection):
                 check_in,
                 check_out,
                 guests_count,
-                status
+                status,
+                is_test_data
             )
-            VALUES (%s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, TRUE)
             """,
             (
                 1,
@@ -191,9 +194,10 @@ def test_confirmed_reservation_cannot_be_confirmed_again(db_connection):
                 check_in,
                 check_out,
                 guests_count,
-                status
+                status,
+                is_test_data
             )
-            VALUES (%s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, TRUE)
             """,
             (
                 1,

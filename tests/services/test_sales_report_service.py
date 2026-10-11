@@ -14,6 +14,56 @@ def set_reservation_created_at(db_connection, reservation_id, created_at):
         )
 
 
+def test_sales_report_excludes_marked_test_reservations_but_keeps_future_bookings(
+    db_connection,
+):
+    repository = ReservationRepository(db_connection)
+    test_reservation_id = repository.create(
+        cottage_id=1,
+        source_id=1,
+        check_in=date(2042, 8, 3),
+        check_out=date(2042, 8, 9),
+        guests_count=2,
+        status="CONFIRMED",
+        total_amount=Decimal("1700.00"),
+        is_test_data=True,
+    )
+    future_reservation_id = repository.create(
+        cottage_id=2,
+        source_id=2,
+        check_in=date(2043, 8, 3),
+        check_out=date(2043, 8, 9),
+        guests_count=2,
+        status="CONFIRMED",
+        total_amount=Decimal("2600.00"),
+        is_test_data=False,
+    )
+    assert repository.get_by_id(test_reservation_id)["is_test_data"] == 1
+    assert repository.get_by_id(future_reservation_id)["is_test_data"] == 0
+    set_reservation_created_at(
+        db_connection,
+        test_reservation_id,
+        datetime(2040, 6, 10, 12, 0),
+    )
+    set_reservation_created_at(
+        db_connection,
+        future_reservation_id,
+        datetime(2040, 6, 11, 12, 0),
+    )
+
+    report = generate_sales_report(
+        db_connection,
+        start_date=date(2040, 6, 1),
+        end_date=date(2040, 7, 1),
+    )
+    reported_ids = {item["id"] for item in report["reservations"]}
+
+    assert test_reservation_id not in reported_ids
+    assert future_reservation_id in reported_ids
+    assert len(report["reservations"]) == 1
+    assert report["total_amount"] == Decimal("2600.00")
+
+
 def test_sales_report_assigns_sale_to_reservation_created_month(
     db_connection,
 ):
@@ -25,6 +75,7 @@ def test_sales_report_assigns_sale_to_reservation_created_month(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1700.00"),
+        is_test_data=False,
     )
 
     set_reservation_created_at(
@@ -61,6 +112,7 @@ def test_sales_report_uses_reservation_created_month(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("2100.00"),
+        is_test_data=False,
     )
     set_reservation_created_at(
         db_connection,
@@ -93,6 +145,7 @@ def test_sales_report_assigns_cross_month_stay_to_reservation_created_month(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("3000.00"),
+        is_test_data=False,
     )
     set_reservation_created_at(
         db_connection,
@@ -138,6 +191,7 @@ def test_sales_report_excludes_cancelled_reservation(
         guests_count=2,
         status="CANCELLED",
         total_amount=Decimal("1960.00"),
+        is_test_data=False,
     )
     set_reservation_created_at(
         db_connection,
@@ -172,6 +226,7 @@ def test_sales_report_uses_reservation_created_month_regardless_of_payment_date(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("2100.00"),
+        is_test_data=False,
     )
     set_reservation_created_at(
         db_connection,
@@ -229,6 +284,7 @@ def test_sales_report_resolves_booking_source(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("2100.00"),
+        is_test_data=False,
     )
     set_reservation_created_at(
         db_connection,
@@ -252,28 +308,31 @@ def test_sales_report_resolves_booking_source(
     assert reservation["source_name"] == "Booking.com"
 
 def test_sales_report_sums_total_amount(
-    db_connection,created_reservation_cleanup
-    ):
+    db_connection,
+    created_reservation_cleanup,
+):
     repository = ReservationRepository(db_connection)
 
     first_reservation_id = repository.create(
-    cottage_id=1,
-    source_id=1,
-    check_in=date(2028, 10, 10),
-    check_out=date(2028, 10, 12),
-    guests_count=2,
-    status="CONFIRMED",
-    total_amount=Decimal("1000.00"),
+        cottage_id=1,
+        source_id=1,
+        check_in=date(2028, 10, 10),
+        check_out=date(2028, 10, 12),
+        guests_count=2,
+        status="CONFIRMED",
+        total_amount=Decimal("1000.00"),
+        is_test_data=False,
     )
 
     second_reservation_id = repository.create(
-    cottage_id=2,
-    source_id=2,
-    check_in=date(2028, 10, 15),
-    check_out=date(2028, 10, 18),
-    guests_count=2,
-    status="CONFIRMED",
-    total_amount=Decimal("1500.00"),
+        cottage_id=2,
+        source_id=2,
+        check_in=date(2028, 10, 15),
+        check_out=date(2028, 10, 18),
+        guests_count=2,
+        status="CONFIRMED",
+        total_amount=Decimal("1500.00"),
+        is_test_data=False,
     )
 
     set_reservation_created_at(
@@ -286,14 +345,12 @@ def test_sales_report_sums_total_amount(
         second_reservation_id,
         datetime(2028, 10, 15, 12, 0, 0),
     )
-    
     created_reservation_cleanup["reservation_ids"].extend(
-    [
-        first_reservation_id,
-        second_reservation_id,
-    ]
-)
-
+        [
+            first_reservation_id,
+            second_reservation_id,
+        ]
+    )
 
     report = generate_sales_report(
         db_connection,
@@ -317,6 +374,7 @@ def test_sales_report_handles_null_total_amount(
         guests_count=2,
         status="CONFIRMED",
         total_amount=None,
+        is_test_data=False,
     )
     set_reservation_created_at(
         db_connection,
@@ -351,6 +409,7 @@ def test_sales_report_summarizes_sales_by_source(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
+        is_test_data=False,
     )
 
     booking_reservation_id = repository.create(
@@ -361,6 +420,7 @@ def test_sales_report_summarizes_sales_by_source(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1500.00"),
+        is_test_data=False,
     )
 
     belvilla_reservation_id = repository.create(
@@ -371,6 +431,7 @@ def test_sales_report_summarizes_sales_by_source(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("2000.00"),
+        is_test_data=False,
     )
 
     set_reservation_created_at(
@@ -422,6 +483,7 @@ def test_sales_report_sums_multiple_reservations_from_same_source(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
+        is_test_data=False,
     )
 
     second_reservation_id = repository.create(
@@ -432,6 +494,7 @@ def test_sales_report_sums_multiple_reservations_from_same_source(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1500.00"),
+        is_test_data=False,
     )
 
     set_reservation_created_at(
@@ -485,6 +548,7 @@ def test_sales_report_source_totals_equal_overall_total(
             guests_count=2,
             status="CONFIRMED",
             total_amount=Decimal(str(amount)),
+            is_test_data=False,
         )
         set_reservation_created_at(
             db_connection,
@@ -529,6 +593,7 @@ def test_sales_report_excludes_pending_and_expired_reservations(
             guests_count=2,
             status=status,
             total_amount=Decimal("2000.00"),
+            is_test_data=False,
         )
         set_reservation_created_at(
             db_connection,
@@ -587,6 +652,7 @@ def test_sales_report_includes_customer_phone(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("2100.00"),
+        is_test_data=False,
     )
     set_reservation_created_at(
         db_connection,
@@ -627,6 +693,7 @@ def test_sales_report_calculates_paid_amount_and_balance(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
+        is_test_data=False,
     )
     set_reservation_created_at(
         db_connection,
@@ -681,6 +748,7 @@ def test_sales_report_calculates_fully_paid_reservation(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
+        is_test_data=False,
     )
     set_reservation_created_at(
         db_connection,
@@ -735,6 +803,7 @@ def test_sales_report_sums_multiple_paid_payments_for_reservation(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1950.00"),
+        is_test_data=False,
     )
     set_reservation_created_at(
         db_connection,
@@ -801,6 +870,7 @@ def test_sales_report_excludes_refunded_amount_from_paid_amount(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
+        is_test_data=False,
     )
     set_reservation_created_at(
         db_connection,
@@ -862,6 +932,7 @@ def test_sales_report_treats_forfeited_payment_as_paid(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
+        is_test_data=False,
     )
     set_reservation_created_at(
         db_connection,
@@ -898,6 +969,7 @@ def test_sales_report_treats_forfeited_payment_as_paid(
 
 def test_sales_report_includes_invoice_number(
     db_connection,
+    created_reservation_cleanup,
 ):
     repository = ReservationRepository(db_connection)
 
@@ -910,14 +982,14 @@ def test_sales_report_includes_invoice_number(
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
         invoice_number="FV/2032/001",
+        is_test_data=False,
     )
     set_reservation_created_at(
         db_connection,
         reservation_id,
         datetime(2032, 10, 5, 12, 0, 0),
     )
-
-    db_connection.commit()
+    created_reservation_cleanup["reservation_ids"].append(reservation_id)
 
     report = generate_sales_report(
         connection=db_connection,
@@ -945,6 +1017,7 @@ def test_sales_report_sorts_reservations_by_created_at_regardless_of_source(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1000.00"),
+        is_test_data=False,
     )
 
     booking_id = repository.create(
@@ -955,6 +1028,7 @@ def test_sales_report_sorts_reservations_by_created_at_regardless_of_source(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("1500.00"),
+        is_test_data=False,
     )
 
     belvilla_id = repository.create(
@@ -965,6 +1039,7 @@ def test_sales_report_sorts_reservations_by_created_at_regardless_of_source(
         guests_count=2,
         status="CONFIRMED",
         total_amount=Decimal("2000.00"),
+        is_test_data=False,
     )
 
     created_reservation_cleanup["reservation_ids"].extend(
