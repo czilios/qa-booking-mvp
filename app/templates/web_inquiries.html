@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Zapytania WWW - Wrzosowo 159
+{% endblock %}
+
+{% block content %}
+<div class="container report-container">
+    <h2>Zapytania WWW</h2>
+
+    {% if inquiries %}
+        <div class="report-table-wrapper">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Otrzymano</th>
+                        <th>Klient</th>
+                        <th>Telefon</th>
+                        <th>E-mail</th>
+                        <th>Termin</th>
+                        <th>Osoby</th>
+                        <th>Preferencja domku</th>
+                        <th>Dostępność w chwili zapytania</th>
+                        <th>Status</th>
+                        <th>Wiadomość</th>
+                        <th>Obsługa</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for inquiry in inquiries %}
+                        <tr id="inquiry-{{ inquiry.id }}">
+                            <td>{{ inquiry.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+                            <td>{{ inquiry.full_name }}</td>
+                            <td>{{ inquiry.phone }}</td>
+                            <td>{{ inquiry.email }}</td>
+                            <td>{{ inquiry.check_in }} – {{ inquiry.check_out }}</td>
+                            <td>{{ inquiry.guests_count }}</td>
+                            <td>{{ "Domek " ~ inquiry.preferred_cottage_id if inquiry.preferred_cottage_id else "Dowolny" }}</td>
+                            <td>
+                                {% if inquiry.available_cottage_ids is none %}
+                                    {% if inquiry.availability_found %}
+                                        Był wolny co najmniej jeden domek; szczegóły nie zostały zapisane
+                                    {% else %}
+                                        Brak wolnego domku
+                                    {% endif %}
+                                {% elif not inquiry.available_cottage_ids %}
+                                    Brak wolnego domku dla liczby osób
+                                {% else %}
+                                    {% if inquiry.preferred_cottage_id %}
+                                        {% if inquiry.preferred_cottage_id in inquiry.available_cottage_ids %}
+                                            Preferowany domek jest wolny.
+                                        {% else %}
+                                            Preferowany domek jest zajęty; dostępne są inne.
+                                        {% endif %}
+                                    {% endif %}
+                                    Wolne domki:
+                                    {% for cottage_id in inquiry.available_cottage_ids %}
+                                        {{ cottage_id }}{% if not loop.last %}, {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                            </td>
+                            <td>{{ inquiry.status }}</td>
+                            <td>{{ inquiry.message or "—" }}</td>
+                            <td class="inquiry-actions">
+                                {% if inquiry.reservation_id %}
+                                    <strong>Rezerwacja #{{ inquiry.reservation_id }}</strong>
+                                    {% if inquiry.reservation_status %}
+                                        <span>{{ inquiry.reservation_status }}</span>
+                                    {% endif %}
+                                    {% if inquiry.reservation_expires_at %}
+                                        <small>Blokada do {{ inquiry.reservation_expires_at.strftime("%Y-%m-%d %H:%M") }}</small>
+                                    {% endif %}
+                                {% elif inquiry.status == "NEW" %}
+                                    <form method="post" action="/ui/inquiries/{{ inquiry.id }}/status">
+                                        <input type="hidden" name="status" value="IN_PROGRESS">
+                                        <button type="submit" class="secondary-button">Akceptuj / rozpocznij</button>
+                                    </form>
+                                    <a class="secondary-button" href="/ui/inquiries/{{ inquiry.id }}/template">Szablon</a>
+                                    <form method="post" action="/ui/inquiries/{{ inquiry.id }}/status">
+                                        <input type="hidden" name="status" value="REJECTED">
+                                        <button type="submit" class="secondary-button">Odrzuć</button>
+                                    </form>
+                                {% elif inquiry.status == "IN_PROGRESS" %}
+                                    <a class="secondary-button" href="/ui/inquiries/{{ inquiry.id }}/template">Szablon</a>
+                                    <form method="post" action="/ui/inquiries/{{ inquiry.id }}/status">
+                                        <input type="hidden" name="status" value="CLOSED">
+                                        <button type="submit" class="secondary-button">Zamknij</button>
+                                    </form>
+                                    <form method="post" action="/ui/inquiries/{{ inquiry.id }}/status">
+                                        <input type="hidden" name="status" value="REJECTED">
+                                        <button type="submit" class="secondary-button">Odrzuć</button>
+                                    </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="no-availability">
+            <strong>Brak zapytań</strong>
+            <p>Zapytania wysłane z formularza WWW pojawią się tutaj.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

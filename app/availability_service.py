@@ -17,10 +17,11 @@ class AvailabilityService:
     check_in,
     check_out,
     exclude_reservation_id=None,
+    guests_count=None,
     ):
         cottage_ids = (
             self.cottage_repository
-            .get_active_cottage_ids()
+            .get_active_cottage_ids(guests_count=guests_count)
         )
 
         reservations = (

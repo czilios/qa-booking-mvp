@@ -18,6 +18,7 @@ class ReservationRepository:
         status: str = "PENDING",
         expires_at: datetime | None = None,
         total_amount: Decimal | None = None,
+        deposit_amount: Decimal | None = None,
         accounting_included: bool = False,
         notes: str | None = None,
         commission_amount: Decimal | None = None,
@@ -38,6 +39,7 @@ class ReservationRepository:
                     status,
                     expires_at,
                     total_amount,
+                    deposit_amount,
                     accounting_included,
                     notes,
                     commission_amount,
@@ -45,7 +47,7 @@ class ReservationRepository:
                     external_reservation_id,
                     is_test_data
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     cottage_id,
@@ -57,6 +59,7 @@ class ReservationRepository:
                     status,
                     expires_at,
                     total_amount,
+                    deposit_amount,
                     accounting_included,
                     notes,
                     commission_amount,
@@ -198,6 +201,11 @@ class ReservationRepository:
                     status
                 FROM reservations
                 WHERE status IN ('PENDING', 'CONFIRMED')
+                  AND (
+                    status = 'CONFIRMED'
+                    OR expires_at IS NULL
+                    OR expires_at > CURRENT_TIMESTAMP
+                  )
                 """
             )
 

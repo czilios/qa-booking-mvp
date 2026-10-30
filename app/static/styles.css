@@ -689,3 +689,75 @@ button {
     box-sizing: border-box;
 }
 
+.inquiry-template-card {
+    max-width: 760px;
+    margin: 18px 0;
+    padding: 14px;
+    border: 1px solid #dddddd;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.inquiry-availability-summary {
+    max-width: 760px;
+    margin: 18px 0;
+    padding: 16px 20px;
+    border-left: 4px solid #2f6b45;
+    border-radius: 6px;
+    background: #f3f7f3;
+}
+
+.inquiry-availability-summary p {
+    margin: 4px 0 10px;
+}
+
+.inquiry-availability-summary small {
+    color: #555555;
+}
+
+.inquiry-template-card p {
+    margin: 8px 0 12px;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.inquiry-template-card input,
+.inquiry-template-card select,
+.inquiry-template-card textarea {
+    display: block;
+    width: 100%;
+    margin: 6px 0 14px;
+    padding: 10px;
+    border: 1px solid #cccccc;
+    border-radius: 6px;
+    font: inherit;
+    white-space: pre-wrap;
+    box-sizing: border-box;
+}
+
+.inquiry-template-card label {
+    display: block;
+    margin-top: 12px;
+    font-weight: 600;
+}
+
+.inquiry-template-card form {
+    max-width: 100%;
+}
+
+.send-inquiry-offer-form {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid #dddddd;
+}
+
+.send-inquiry-offer-form label {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.inquiry-template-card textarea {
+    resize: vertical;
+}
+

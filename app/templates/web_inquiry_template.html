@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Szablon odpowiedzi - Wrzosowo 159
+{% endblock %}
+
+{% block content %}
+<div class="container report-container">
+    <h2>Szablon odpowiedzi</h2>
+    <p>
+        {{ inquiry.full_name }} · {{ inquiry.email }} ·
+        Zapytanie: {{ inquiry.check_in }} – {{ inquiry.check_out }}
+    </p>
+
+    <section class="inquiry-availability-summary">
+        {% if current_cottage_ids %}
+            <p>Sprawdzany termin: {{ quote_check_in }} – {{ quote_check_out }}</p>
+            {% if inquiry.preferred_cottage_id %}
+                {% if preferred_cottage_available %}
+                    <p><strong>Domek {{ inquiry.preferred_cottage_id }} jest obecnie dostępny.</strong></p>
+                {% else %}
+                    <p><strong>Domek {{ inquiry.preferred_cottage_id }} jest niedostępny.</strong></p>
+                    <p>Możliwe alternatywy: {% for cottage_id in alternative_cottage_ids %}Domek {{ cottage_id }}{% if not loop.last %}, {% endif %}{% endfor %}.</p>
+                {% endif %}
+            {% else %}
+                <p><strong>Termin jest dostępny.</strong></p>
+                <p>Wolne domki: {% for cottage_id in current_cottage_ids %}Domek {{ cottage_id }}{% if not loop.last %}, {% endif %}{% endfor %}.</p>
+            {% endif %}
+        {% else %}
+            <p><strong>W podanym terminie żaden domek nie jest obecnie dostępny.</strong></p>
+            {% if alternative_dates %}
+                <p>Możliwe alternatywy o tej samej długości pobytu (do 7 dni w każdą stronę):</p>
+                <ul>
+                    {% for option in alternative_dates %}
+                        <li>
+                            {{ option.check_in }} – {{ option.check_out }}; wolne domki:
+                            {% for cottage_id in option.cottage_ids %}{{ cottage_id }}{% if not loop.last %}, {% endif %}{% endfor %}
+                            {% if option.estimated_amount is not none %}
+                                · szacunkowo {{ "{:,.2f}".format(option.estimated_amount).replace(",", " ").replace(".", ",") }} zł,
+                                zaliczka 30%: {{ "{:,.2f}".format(option.deposit_amount).replace(",", " ").replace(".", ",") }} zł
+                            {% else %}
+                                · cena do ręcznego ustalenia
+                            {% endif %}
+                            <a href="/ui/inquiries/{{ inquiry.id }}/template?check_in={{ option.check_in }}&amp;check_out={{ option.check_out }}">Przygotuj szablon na ten termin</a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>Nie znaleziono wolnego terminu w pobliżu ±7 dni.</p>
+            {% endif %}
+        {% endif %}
+        <small>Dostępność jest sprawdzana ponownie z aktualnym stanem rezerwacji.</small>
+    </section>
+
+    {% if current_cottage_ids %}
+    <section class="inquiry-template-card">
+        <h3>Dane oferty</h3>
+        {% if estimated_amount is not none %}
+            <p>Cena orientacyjna z cennika strony: {{ "{:,.2f}".format(estimated_amount).replace(",", " ").replace(".", ",") }} zł. Zaliczka 30%.</p>
+            <p>Cena nie obejmuje opłaty miejscowej (3 zł/osoba/noc) ani ewentualnej opłaty za psa (25 zł/doba). Sprawdź te dodatki przed wysłaniem.</p>
+        {% else %}
+            <p>Nie można automatycznie ustalić ceny dla tego miesiąca — wpisz i zweryfikuj ją ręcznie.</p>
+        {% endif %}
+        <form method="get" action="/ui/inquiries/{{ inquiry.id }}/template">
+            <input type="hidden" name="check_in" value="{{ quote_check_in }}">
+            <input type="hidden" name="check_out" value="{{ quote_check_out }}">
+            <label for="cottage">Domek</label>
+            <select id="cottage" name="cottage" required>
+                <option value="" disabled {% if not cottage %}selected{% endif %}>Wybierz dostępny domek</option>
+                {% for cottage_id in current_cottage_ids %}
+                    {% set cottage_name = "Domek " ~ cottage_id %}
+                    <option value="{{ cottage_name }}" {% if cottage == cottage_name %}selected{% endif %}>{{ cottage_name }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="total_amount">Wartość pobytu (zł)</label>
+            <input id="total_amount" name="total_amount" type="number" min="0.01" step="0.01" required value="{{ total_amount if total_amount is not none else '' }}">
+
+            <label for="deposit_amount">Zaliczka (zł)</label>
+            <input id="deposit_amount" name="deposit_amount" type="number" min="0.01" step="0.01" required readonly value="{{ deposit_amount if deposit_amount is not none else '' }}">
+
+            {% if total_amount is not none and deposit_amount is not none %}
+                <p>Pozostało do zapłaty: {{ "{:,.2f}".format(total_amount - deposit_amount).replace(",", " ").replace(".", ",") }} zł.</p>
+            {% endif %}
+
+            <button type="submit" class="primary-button">Generuj szablon</button>
+        </form>
+    </section>
+    {% endif %}
+
+    {% if message %}
+        <section class="inquiry-template-card">
+            <h3>Wiadomość do skopiowania</h3>
+            <p>Wyślij ją ręcznie ze swojej poczty. 48 godzin liczy się od faktycznego wysłania wiadomości.</p>
+            <label for="template-recipient">Adres e-mail</label>
+            <input id="template-recipient" type="email" readonly value="{{ inquiry.email }}">
+            <label for="template-subject">Temat</label>
+            <input id="template-subject" readonly value="Wrzosowo 159 — oferta pobytu {{ quote_check_in }}–{{ quote_check_out }}">
+            <label for="template-message">Treść</label>
+            <textarea id="template-message" rows="20" readonly>{{ message }}</textarea>
+            <button type="button" class="secondary-button" onclick="document.getElementById('template-message').select(); document.execCommand('copy');">Kopiuj treść</button>
+            {% if current_cottage_ids and cottage %}
+                <p>Po ręcznym wysłaniu tej wiadomości potwierdź to poniżej. System utworzy rezerwację PENDING i zablokuje wybrany domek na 48 godzin.</p>
+                <form method="post" action="/ui/inquiries/{{ inquiry.id }}/send-payment-request" class="send-inquiry-offer-form">
+                    <input type="hidden" name="cottage_id" value="{{ cottage.split(' ')[1] }}">
+                    <input type="hidden" name="total_amount" value="{{ total_amount }}">
+                    <input type="hidden" name="deposit_amount" value="{{ deposit_amount }}">
+                    <input type="hidden" name="check_in" value="{{ quote_check_in }}">
+                    <input type="hidden" name="check_out" value="{{ quote_check_out }}">
+                    <label><input type="checkbox" name="confirm_sent" value="true" required> Potwierdzam, że wiadomość została wysłana</label>
+                    <button type="submit" class="primary-button">Wysłano — utwórz rezerwację wstępną</button>
+                </form>
+            {% endif %}
+        </section>
+    {% endif %}
+
+    <a class="secondary-button" href="/ui/inquiries#inquiry-{{ inquiry.id }}">Wróć do zapytań</a>
+</div>
+<script>
+    const totalAmount = document.getElementById("total_amount");
+    const depositAmount = document.getElementById("deposit_amount");
+    if (totalAmount && depositAmount) {
+        totalAmount.addEventListener("input", () => {
+            const amount = Number(totalAmount.value);
+            if (Number.isFinite(amount) && amount > 0) {
+                depositAmount.value = (Math.round(amount * 30) / 100).toFixed(2);
+            }
+        });
+    }
+</script>
+{% endblock %}

@@ -99,3 +99,17 @@ def created_bank_transaction_cleanup(db_connection):
             )
 
     db_connection.commit()
+
+
+@pytest.fixture
+def created_web_inquiry_cleanup(db_connection):
+    inquiry_ids = []
+    yield inquiry_ids
+
+    with db_connection.cursor() as cursor:
+        for inquiry_id in inquiry_ids:
+            cursor.execute(
+                "DELETE FROM web_inquiries WHERE id = %s",
+                (inquiry_id,),
+            )
+    db_connection.commit()
