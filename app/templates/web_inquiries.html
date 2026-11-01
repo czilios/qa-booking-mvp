@@ -5,98 +5,132 @@
 {% endblock %}
 
 {% block content %}
-<div class="container report-container">
-    <h2>Zapytania WWW</h2>
+<div class="container inquiries-container">
+    <header class="inquiries-heading">
+        <div>
+            <h2>Zapytania WWW</h2>
+            <p>Zapytania klientów i ich bieżąca obsługa.</p>
+        </div>
+        <span class="inquiry-count">{{ inquiries|length }} zapytań</span>
+    </header>
 
     {% if inquiries %}
-        <div class="report-table-wrapper">
-            <table class="report-table">
-                <thead>
-                    <tr>
-                        <th>Otrzymano</th>
-                        <th>Klient</th>
-                        <th>Telefon</th>
-                        <th>E-mail</th>
-                        <th>Termin</th>
-                        <th>Osoby</th>
-                        <th>Preferencja domku</th>
-                        <th>Dostępność w chwili zapytania</th>
-                        <th>Status</th>
-                        <th>Wiadomość</th>
-                        <th>Obsługa</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for inquiry in inquiries %}
-                        <tr id="inquiry-{{ inquiry.id }}">
-                            <td>{{ inquiry.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
-                            <td>{{ inquiry.full_name }}</td>
-                            <td>{{ inquiry.phone }}</td>
-                            <td>{{ inquiry.email }}</td>
-                            <td>{{ inquiry.check_in }} – {{ inquiry.check_out }}</td>
-                            <td>{{ inquiry.guests_count }}</td>
-                            <td>{{ "Domek " ~ inquiry.preferred_cottage_id if inquiry.preferred_cottage_id else "Dowolny" }}</td>
-                            <td>
-                                {% if inquiry.available_cottage_ids is none %}
-                                    {% if inquiry.availability_found %}
-                                        Był wolny co najmniej jeden domek; szczegóły nie zostały zapisane
-                                    {% else %}
-                                        Brak wolnego domku
-                                    {% endif %}
-                                {% elif not inquiry.available_cottage_ids %}
-                                    Brak wolnego domku dla liczby osób
-                                {% else %}
-                                    {% if inquiry.preferred_cottage_id %}
-                                        {% if inquiry.preferred_cottage_id in inquiry.available_cottage_ids %}
-                                            Preferowany domek jest wolny.
-                                        {% else %}
-                                            Preferowany domek jest zajęty; dostępne są inne.
-                                        {% endif %}
-                                    {% endif %}
-                                    Wolne domki:
-                                    {% for cottage_id in inquiry.available_cottage_ids %}
-                                        {{ cottage_id }}{% if not loop.last %}, {% endif %}
-                                    {% endfor %}
-                                {% endif %}
-                            </td>
-                            <td>{{ inquiry.status }}</td>
-                            <td>{{ inquiry.message or "—" }}</td>
-                            <td class="inquiry-actions">
-                                {% if inquiry.reservation_id %}
-                                    <strong>Rezerwacja #{{ inquiry.reservation_id }}</strong>
-                                    {% if inquiry.reservation_status %}
-                                        <span>{{ inquiry.reservation_status }}</span>
-                                    {% endif %}
-                                    {% if inquiry.reservation_expires_at %}
-                                        <small>Blokada do {{ inquiry.reservation_expires_at.strftime("%Y-%m-%d %H:%M") }}</small>
-                                    {% endif %}
-                                {% elif inquiry.status == "NEW" %}
-                                    <form method="post" action="/ui/inquiries/{{ inquiry.id }}/status">
-                                        <input type="hidden" name="status" value="IN_PROGRESS">
-                                        <button type="submit" class="secondary-button">Akceptuj / rozpocznij</button>
-                                    </form>
-                                    <a class="secondary-button" href="/ui/inquiries/{{ inquiry.id }}/template">Szablon</a>
-                                    <form method="post" action="/ui/inquiries/{{ inquiry.id }}/status">
-                                        <input type="hidden" name="status" value="REJECTED">
-                                        <button type="submit" class="secondary-button">Odrzuć</button>
-                                    </form>
-                                {% elif inquiry.status == "IN_PROGRESS" %}
-                                    <a class="secondary-button" href="/ui/inquiries/{{ inquiry.id }}/template">Szablon</a>
-                                    <form method="post" action="/ui/inquiries/{{ inquiry.id }}/status">
-                                        <input type="hidden" name="status" value="CLOSED">
-                                        <button type="submit" class="secondary-button">Zamknij</button>
-                                    </form>
-                                    <form method="post" action="/ui/inquiries/{{ inquiry.id }}/status">
-                                        <input type="hidden" name="status" value="REJECTED">
-                                        <button type="submit" class="secondary-button">Odrzuć</button>
-                                    </form>
-                                {% endif %}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="inquiry-list">
+            {% for inquiry in active_inquiries %}
+                <article class="inquiry-card" id="inquiry-{{ inquiry.id }}">
+                    <header class="inquiry-card-header">
+                        <div>
+                            <h3>{{ inquiry.full_name }}</h3>
+                            <span class="inquiry-received">Otrzymano {{ inquiry.created_at.strftime("%Y-%m-%d %H:%M") }}</span>
+                        </div>
+                        <span class="inquiry-status inquiry-status-{{ inquiry.status|lower }}">{{ inquiry.status }}</span>
+                    </header>
+
+                    <div class="inquiry-details-grid">
+                        <section>
+                            <h4>Kontakt</h4>
+                            <span>{{ inquiry.phone }}</span>
+                            <span>{{ inquiry.email }}</span>
+                        </section>
+                        <section>
+                            <h4>Termin i grupa</h4>
+                            <strong>{{ inquiry.check_in }} – {{ inquiry.check_out }}</strong>
+                            <span>{{ inquiry.guests_count }} os.</span>
+                        </section>
+                        <section>
+                            <h4>Domek</h4>
+                            <strong>{{ "Domek " ~ inquiry.preferred_cottage_id if inquiry.preferred_cottage_id else "Dowolny" }}</strong>
+                            {% if inquiry.available_cottage_ids %}
+                                <span>Wolne w chwili zapytania: {{ inquiry.available_cottage_ids|join(", ") }}</span>
+                            {% elif inquiry.available_cottage_ids is not none %}
+                                <span>Brak wolnego domku w chwili zapytania</span>
+                            {% else %}
+                                <span>Szczegóły dostępności nie zostały zapisane</span>
+                            {% endif %}
+                        </section>
+                    </div>
+
+                    {% if inquiry.message %}
+                        <details class="inquiry-message">
+                            <summary>Wiadomość klienta</summary>
+                            <p>{{ inquiry.message }}</p>
+                        </details>
+                    {% endif %}
+
+                    {% if inquiry.reservation_id %}
+                        <div class="inquiry-reservation-state">
+                            <strong>Rezerwacja #{{ inquiry.reservation_id }}</strong>
+                            <span>Status: {{ inquiry.reservation_status or "—" }}</span>
+                            {% if inquiry.reservation_expires_at %}
+                                <span>Termin płatności / blokada do {{ inquiry.reservation_expires_at.strftime("%Y-%m-%d %H:%M") }}</span>
+                            {% endif %}
+                        </div>
+                    {% elif inquiry.message_sent_at %}
+                        <div class="inquiry-offer-state">
+                            <strong>Oferta wysłana {{ inquiry.message_sent_at.strftime("%Y-%m-%d %H:%M") }}</strong>
+                            <span>{{ "Domek " ~ inquiry.offered_cottage_id }} · {{ inquiry.offered_check_in }} – {{ inquiry.offered_check_out }}</span>
+                            <span>Wartość: {{ "{:,.2f}".format(inquiry.offered_total_amount).replace(",", " ").replace(".", ",") }} zł · zadatek 30%: {{ "{:,.2f}".format(inquiry.offered_deposit_amount).replace(",", " ").replace(".", ",") }} zł</span>
+                            <span>{% if inquiry.offer_expired %}Oferta wygasła{% else %}Akceptacja i płatność do {{ inquiry.offer_expires_at.strftime("%Y-%m-%d %H:%M") }}{% endif %}</span>
+                        </div>
+                    {% endif %}
+
+                    <div class="inquiry-actions">
+                        {% if inquiry.reservation_id %}
+                            <span class="inquiry-action-note">Termin jest zablokowany przez rezerwację.</span>
+                        {% elif inquiry.status == "NEW" %}
+                            <form method="post" action="/ui/inquiries/{{ inquiry.id }}/status">
+                                <input type="hidden" name="status" value="IN_PROGRESS">
+                                <button type="submit" class="inquiry-action-button inquiry-action-neutral">Rozpocznij obsługę</button>
+                            </form>
+                            <form method="post" action="/ui/inquiries/{{ inquiry.id }}/status">
+                                <input type="hidden" name="status" value="REJECTED">
+                                <button type="submit" class="inquiry-action-button inquiry-action-reject">Odrzuć</button>
+                            </form>
+                        {% elif inquiry.status == "IN_PROGRESS" and inquiry.message_sent_at and not inquiry.offer_expired %}
+                            <form method="post" action="/ui/inquiries/{{ inquiry.id }}/accept">
+                                <button type="submit" class="inquiry-action-button inquiry-action-accept">Akceptuj i zablokuj termin</button>
+                            </form>
+                            <a class="inquiry-action-button inquiry-action-template" href="/ui/inquiries/{{ inquiry.id }}/template">Podgląd szablonu</a>
+                            <form method="post" action="/ui/inquiries/{{ inquiry.id }}/status">
+                                <input type="hidden" name="status" value="REJECTED">
+                                <button type="submit" class="inquiry-action-button inquiry-action-reject">Odrzuć</button>
+                            </form>
+                        {% elif inquiry.status == "IN_PROGRESS" and inquiry.message_sent_at %}
+                            <a class="inquiry-action-button inquiry-action-template" href="/ui/inquiries/{{ inquiry.id }}/template">Szablon — wyślij ponownie</a>
+                            <form method="post" action="/ui/inquiries/{{ inquiry.id }}/status">
+                                <input type="hidden" name="status" value="REJECTED">
+                                <button type="submit" class="inquiry-action-button inquiry-action-reject">Odrzuć</button>
+                            </form>
+                        {% elif inquiry.status == "IN_PROGRESS" %}
+                            <a class="inquiry-action-button inquiry-action-template" href="/ui/inquiries/{{ inquiry.id }}/template">Szablon</a>
+                            <form method="post" action="/ui/inquiries/{{ inquiry.id }}/status">
+                                <input type="hidden" name="status" value="CLOSED">
+                                <button type="submit" class="inquiry-action-button inquiry-action-neutral">Zamknij</button>
+                            </form>
+                            <form method="post" action="/ui/inquiries/{{ inquiry.id }}/status">
+                                <input type="hidden" name="status" value="REJECTED">
+                                <button type="submit" class="inquiry-action-button inquiry-action-reject">Odrzuć</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </article>
+            {% endfor %}
         </div>
+        {% if resolved_inquiries %}
+            <details class="inquiry-archive">
+                <summary>Zamknięte i rozstrzygnięte zapytania ({{ resolved_inquiries|length }})</summary>
+                <div class="inquiry-archive-list">
+                    {% for inquiry in resolved_inquiries %}
+                        <div class="inquiry-archive-row" id="inquiry-{{ inquiry.id }}">
+                            <strong>{{ inquiry.full_name }}</strong>
+                            <span>{{ inquiry.check_in }} – {{ inquiry.check_out }}</span>
+                            <span class="inquiry-status inquiry-status-{{ inquiry.status|lower }}">{{ inquiry.status }}</span>
+                            {% if inquiry.reservation_id %}<span>Rezerwacja #{{ inquiry.reservation_id }} ({{ inquiry.reservation_status }})</span>{% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </details>
+        {% endif %}
     {% else %}
         <div class="no-availability">
             <strong>Brak zapytań</strong>

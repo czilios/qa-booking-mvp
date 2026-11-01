@@ -690,7 +690,8 @@ button {
 }
 
 .inquiry-template-card {
-    max-width: 760px;
+    width: 100%;
+    max-width: none;
     margin: 18px 0;
     padding: 14px;
     border: 1px solid #dddddd;
@@ -699,7 +700,7 @@ button {
 }
 
 .inquiry-availability-summary {
-    max-width: 760px;
+    max-width: 1120px;
     margin: 18px 0;
     padding: 16px 20px;
     border-left: 4px solid #2f6b45;
@@ -735,6 +736,39 @@ button {
     box-sizing: border-box;
 }
 
+.inquiry-template-page {
+    width: min(100% - 32px, 1320px);
+    max-width: 1320px;
+    margin: 24px auto;
+    box-sizing: border-box;
+}
+
+.inquiry-template-card .offer-amount-input {
+    width: 100%;
+    min-height: 48px;
+    font-size: 18px;
+}
+
+.generated-message-card {
+    width: 100%;
+    max-width: none;
+}
+
+.generated-message-card textarea {
+    width: 100%;
+    min-height: 520px;
+    padding: 16px;
+    font-size: 16px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.generated-message-card input {
+    min-height: 46px;
+    font-size: 16px;
+}
+
 .inquiry-template-card label {
     display: block;
     margin-top: 12px;
@@ -757,7 +791,325 @@ button {
     align-items: center;
 }
 
+.inquiries-container {
+    width: min(100% - 32px, 1180px);
+    margin: 28px auto;
+    box-sizing: border-box;
+}
+
+.inquiries-heading,
+.inquiry-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.inquiries-heading {
+    margin-bottom: 20px;
+}
+
+.inquiries-heading h2,
+.inquiry-card h3 {
+    margin: 0 0 6px;
+}
+
+.inquiries-heading p,
+.inquiry-received {
+    margin: 0;
+    color: #666666;
+}
+
+.inquiry-count,
+.inquiry-status {
+    padding: 7px 11px;
+    border-radius: 999px;
+    background: #eeeeee;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.inquiry-list {
+    display: grid;
+    gap: 16px;
+}
+
+.inquiry-card {
+    min-width: 0;
+    padding: 20px;
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 3px 12px rgb(0 0 0 / 6%);
+    scroll-margin-top: 20px;
+}
+
+.inquiry-status-new {
+    color: #704900;
+    background: #fff2cc;
+}
+
+.inquiry-status-in_progress {
+    color: #174b7a;
+    background: #e5f1fb;
+}
+
+.inquiry-status-converted {
+    color: #1e5a32;
+    background: #e1f2e5;
+}
+
+.inquiry-status-rejected,
+.inquiry-status-closed {
+    color: #555555;
+    background: #eeeeee;
+}
+
+.inquiry-details-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+    margin: 18px 0;
+}
+
+.inquiry-details-grid section {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    overflow-wrap: anywhere;
+}
+
+.inquiry-details-grid h4 {
+    margin: 0 0 3px;
+    color: #666666;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.inquiry-details-grid a {
+    color: #174b7a;
+}
+
+.inquiry-message {
+    margin: 12px 0;
+    padding: 10px 12px;
+    border-radius: 7px;
+    background: #f7f7f7;
+}
+
+.inquiry-message summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.inquiry-message p {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.inquiry-reservation-state,
+.inquiry-offer-state {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    margin: 14px 0;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: #edf6ef;
+}
+
+.inquiry-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-top: 14px;
+    border-top: 1px solid #eeeeee;
+}
+
+.inquiry-actions form {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.inquiry-action-button {
+    display: inline-flex;
+    width: 190px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 16px;
+    margin: 0;
+    border: 0;
+    border-radius: 7px;
+    font: inherit;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.inquiry-action-template,
+.inquiry-action-neutral {
+    color: #222222;
+    background: #eeeeee;
+}
+
+.inquiry-action-accept {
+    color: #ffffff;
+    background: #287a3d;
+}
+
+.inquiry-action-reject {
+    color: #ffffff;
+    background: #b52b27;
+}
+
+.inquiry-action-accept:hover {
+    background: #216433;
+}
+
+.inquiry-action-reject:hover {
+    background: #97221f;
+}
+
+.inquiry-action-note {
+    color: #386345;
+    font-weight: 600;
+}
+
+.inquiry-archive {
+    margin-top: 24px;
+    border: 1px solid #e2e2e2;
+    border-radius: 10px;
+    background: #ffffff;
+}
+
+.inquiry-archive > summary {
+    padding: 15px 18px;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.inquiry-archive-list {
+    padding: 0 18px 14px;
+}
+
+.inquiry-archive-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    padding: 12px 0;
+    border-top: 1px solid #eeeeee;
+}
+
+@media (max-width: 700px) {
+    .inquiries-container {
+        width: min(100% - 20px, 1180px);
+        margin: 18px auto;
+    }
+
+    .inquiry-card {
+        padding: 15px;
+    }
+
+    .inquiry-details-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .inquiry-card-header {
+        align-items: flex-start;
+    }
+
+    .inquiry-actions {
+        align-items: stretch;
+    }
+
+    .inquiry-actions form,
+    .inquiry-actions .inquiry-action-button {
+        flex: 1 1 100%;
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
+
 .inquiry-template-card textarea {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
     resize: vertical;
+}
+
+.reservation-lookup-form {
+    margin-bottom: 16px;
+}
+
+.reservation-lookup-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+}
+
+.reservation-lookup-controls input {
+    width: 100%;
+    min-height: 46px;
+    padding: 10px 12px;
+    border: 1px solid #cccccc;
+    border-radius: 7px;
+    font: inherit;
+}
+
+.reservation-lookup-controls button {
+    width: auto;
+    min-height: 46px;
+    margin: 0;
+    white-space: nowrap;
+}
+
+.reservation-lookup-form small {
+    display: block;
+    margin-top: 8px;
+    color: #555555;
+}
+
+.reservation-lookup-summary,
+.reservation-lookup-error {
+    margin: 0 0 16px;
+    padding: 14px 18px;
+    border-radius: 9px;
+}
+
+.reservation-lookup-summary {
+    border-left: 4px solid #287a3d;
+    background: #edf6ef;
+}
+
+.reservation-lookup-summary h3,
+.reservation-lookup-summary p {
+    margin: 4px 0;
+}
+
+.reservation-lookup-error {
+    border-left: 4px solid #b52b27;
+    background: #fff0ef;
+    color: #84201c;
+}
+
+@media (max-width: 600px) {
+    .reservation-lookup-controls {
+        grid-template-columns: 1fr;
+    }
+
+    .reservation-lookup-controls button {
+        width: 100%;
+    }
 }
 

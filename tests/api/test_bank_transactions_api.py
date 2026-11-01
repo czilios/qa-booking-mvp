@@ -4,6 +4,8 @@ from decimal import Decimal
 from app.repositories.bank_transaction_repository import (
     BankTransactionRepository,
 )
+from app.repositories.payment_repository import PaymentRepository
+from app.repositories.reservation_repository import ReservationRepository
 
 def test_bank_transactions_ui_get(
     api_client,
@@ -224,3 +226,107 @@ def test_bank_transactions_ui_post_rejects_negative_amount(
     )
 
     assert response.status_code == 400
+
+
+def test_bank_transactions_ui_links_direct_deposit_to_reservation(
+    api_client,
+    db_connection,
+    created_reservation_cleanup,
+    created_bank_transaction_cleanup,
+):
+    reservation_repository = ReservationRepository(db_connection)
+    reservation_id = reservation_repository.create(
+        cottage_id=3,
+        source_id=1,
+        check_in=date(2026, 8, 3),
+        check_out=date(2026, 8, 9),
+        guests_count=2,
+        status="PENDING",
+        total_amount=Decimal("2100.00"),
+        deposit_amount=Decimal("630.00"),
+        is_test_data=True,
+    )
+    created_reservation_cleanup["reservation_ids"].append(reservation_id)
+    payment_repository = PaymentRepository(db_connection)
+    payment_repository.create_payment(
+        reservation_id=reservation_id,
+        payment_type="DEPOSIT",
+        amount=Decimal("630.00"),
+    )
+
+    response = api_client.post(
+        "/ui/bank-transactions",
+        data={
+            "transaction_date": "2026-06-15",
+            "source_id": "1",
+            "cottage_id": "3",
+            "amount": "630.00",
+            "description": "Zadatek",
+            "notes": "Przelew za pobyt",
+            "reservation_number": f"#{reservation_id}",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"] == (
+        "/ui/bank-transactions?month=6&year=2026"
+    )
+    with db_connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT id FROM bank_transactions WHERE description = %s "
+            "ORDER BY id DESC LIMIT 1",
+            ("Zadatek",),
+        )
+        transaction = cursor.fetchone()
+        assert transaction is not None
+        created_bank_transaction_cleanup.append(transaction["id"])
+
+    payment = payment_repository.get_payment_by_reservation_id(reservation_id)[0]
+    reservation = reservation_repository.get_by_id(reservation_id)
+    assert payment["status"] == "PAID"
+    assert payment["bank_transaction_id"] == transaction["id"]
+    assert reservation["status"] == "CONFIRMED"
+
+
+def test_bank_transactions_ui_rejects_direct_deposit_amount_mismatch(
+    api_client,
+    db_connection,
+    created_reservation_cleanup,
+):
+    reservation_id = ReservationRepository(db_connection).create(
+        cottage_id=3,
+        source_id=1,
+        check_in=date(2026, 8, 3),
+        check_out=date(2026, 8, 9),
+        guests_count=2,
+        status="PENDING",
+        total_amount=Decimal("2100.00"),
+        deposit_amount=Decimal("630.00"),
+        is_test_data=True,
+    )
+    created_reservation_cleanup["reservation_ids"].append(reservation_id)
+    PaymentRepository(db_connection).create_payment(
+        reservation_id=reservation_id,
+        payment_type="DEPOSIT",
+        amount=Decimal("630.00"),
+    )
+    db_connection.commit()
+
+    response = api_client.post(
+        "/ui/bank-transactions",
+        data={
+            "transaction_date": "2026-06-16",
+            "source_id": "1",
+            "amount": "600.00",
+            "reservation_number": f"#{reservation_id}",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 400
+    payment = PaymentRepository(db_connection).get_payment_by_reservation_id(
+        reservation_id
+    )[0]
+    assert payment["status"] == "UNPAID"
+    assert payment["bank_transaction_id"] is None

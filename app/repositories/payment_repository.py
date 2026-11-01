@@ -125,6 +125,7 @@ class PaymentRepository:
         self,
         payment_id: int,
         paid_at: datetime,
+        bank_transaction_id: int | None = None,
     ) -> None:
         with self.connection.cursor() as cursor:
             cursor.execute(
@@ -132,11 +133,13 @@ class PaymentRepository:
                 UPDATE payments
                 SET
                     status = 'PAID',
-                    paid_at = %s
+                    paid_at = %s,
+                    bank_transaction_id = COALESCE(%s, bank_transaction_id)
                 WHERE id = %s
                 """,
                 (
                     paid_at,
+                    bank_transaction_id,
                     payment_id,
                 ),
             )

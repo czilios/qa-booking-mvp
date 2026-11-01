@@ -1,10 +1,10 @@
-from datetime import date
+from datetime import date, timedelta
 from html import unescape
 from urllib.parse import unquote
 
 from app.repositories.cottage_repository import CottageRepository
 from app.repositories.reservation_repository import ReservationRepository
-from app.main import estimate_inquiry_stay_price
+from app.main import estimate_inquiry_stay_price, inquiry_price_uses_default_rate
 
 
 def test_inquiry_price_estimate_uses_website_season_and_weekend_rates():
@@ -14,6 +14,12 @@ def test_inquiry_price_estimate_uses_website_season_and_weekend_rates():
     assert estimate_inquiry_stay_price(
         date(2026, 6, 4), date(2026, 6, 7)
     ) == 1350
+    assert estimate_inquiry_stay_price(
+        date(2026, 10, 19), date(2026, 11, 29)
+    ) == 14100
+    assert inquiry_price_uses_default_rate(
+        date(2026, 10, 19), date(2026, 11, 29)
+    ) is True
 
 
 def test_web_inquiry_is_saved_without_creating_a_reservation(
@@ -165,6 +171,8 @@ def test_operator_can_mark_web_inquiry_in_progress(
     assert "przesłanie potwierdzenia wpłaty" in generated_response.text
     assert "3 zł za osobę za noc" in generated_response.text
     assert "25 zł/doba" in generated_response.text
+    assert 'id="template-message" rows="24" spellcheck="true"' in generated_response.text
+    assert 'id="template-message" rows="24" spellcheck="true" readonly' not in generated_response.text
 
 
 def test_operator_sending_offer_creates_pending_reservation_and_blocks_cottage(
@@ -198,8 +206,17 @@ def test_operator_sending_offer_creates_pending_reservation_and_blocks_cottage(
         f"/ui/inquiries/{inquiry_id}/status",
         data={"status": "IN_PROGRESS"},
     )
-    response = api_client.post(
-        f"/ui/inquiries/{inquiry_id}/send-payment-request",
+    in_progress_panel = api_client.get("/ui/inquiries")
+    assert "inquiry-card" in in_progress_panel.text
+    assert "report-table-wrapper" not in in_progress_panel.text
+    assert f"href=\"/ui/inquiries/{inquiry_id}/template\"" in in_progress_panel.text
+    assert "inquiry-action-template" in in_progress_panel.text
+    assert "inquiry-action-reject" in in_progress_panel.text
+    assert "Akceptuj i zablokuj termin" not in in_progress_panel.text
+    assert api_client.post(f"/ui/inquiries/{inquiry_id}/accept").status_code == 409
+
+    mark_sent_response = api_client.post(
+        f"/ui/inquiries/{inquiry_id}/mark-offer-sent",
         data={
             "cottage_id": cottage_id,
             "total_amount": "2400.00",
@@ -211,6 +228,24 @@ def test_operator_sending_offer_creates_pending_reservation_and_blocks_cottage(
         follow_redirects=False,
     )
 
+    assert mark_sent_response.status_code == 303
+    with db_connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT status, reservation_id, message_sent_at FROM web_inquiries WHERE id = %s",
+            (inquiry_id,),
+        )
+        sent_inquiry = cursor.fetchone()
+    assert sent_inquiry["status"] == "IN_PROGRESS"
+    assert sent_inquiry["reservation_id"] is None
+    assert sent_inquiry["message_sent_at"] is not None
+    sent_panel = api_client.get("/ui/inquiries")
+    assert "Akceptuj i zablokuj termin" in sent_panel.text
+    assert "inquiry-action-accept" in sent_panel.text
+
+    response = api_client.post(
+        f"/ui/inquiries/{inquiry_id}/accept",
+        follow_redirects=False,
+    )
     assert response.status_code == 303
     reservation_id = int(
         response.headers["location"].split("reservation_id=")[1].split("#")[0]
@@ -230,7 +265,7 @@ def test_operator_sending_offer_creates_pending_reservation_and_blocks_cottage(
         )
         payment = cursor.fetchone()
         cursor.execute(
-            "SELECT status, reservation_id FROM web_inquiries WHERE id = %s",
+            "SELECT status, reservation_id, message_sent_at FROM web_inquiries WHERE id = %s",
             (inquiry_id,),
         )
         inquiry = cursor.fetchone()
@@ -244,6 +279,7 @@ def test_operator_sending_offer_creates_pending_reservation_and_blocks_cottage(
     assert payment["status"] == "UNPAID"
     assert str(payment["amount"]) == "720.00"
     assert payment["due_at"] == reservation["expires_at"]
+    assert reservation["expires_at"] == sent_inquiry["message_sent_at"] + timedelta(hours=48)
     assert inquiry["status"] == "CONVERTED"
     assert inquiry["reservation_id"] == reservation_id
 
@@ -251,18 +287,9 @@ def test_operator_sending_offer_creates_pending_reservation_and_blocks_cottage(
     assert panel_response.status_code == 200
     assert f"Rezerwacja #{reservation_id}" in panel_response.text
     assert "PENDING" in panel_response.text
+    assert "Zamknięte i rozstrzygnięte zapytania" in panel_response.text
 
-    duplicate_response = api_client.post(
-        f"/ui/inquiries/{inquiry_id}/send-payment-request",
-        data={
-            "cottage_id": cottage_id,
-            "total_amount": "2400.00",
-            "deposit_amount": "720.00",
-            "check_in": "2050-07-10",
-            "check_out": "2050-07-17",
-            "confirm_sent": "true",
-        },
-    )
+    duplicate_response = api_client.post(f"/ui/inquiries/{inquiry_id}/accept")
     assert duplicate_response.status_code == 409
 
     availability_response = api_client.get(

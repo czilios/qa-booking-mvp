@@ -5,7 +5,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="container report-container">
+<div class="container report-container inquiry-template-page">
     <h2>Szablon odpowiedzi</h2>
     <p>
         {{ inquiry.full_name }} · {{ inquiry.email }} ·
@@ -37,7 +37,7 @@
                             {% for cottage_id in option.cottage_ids %}{{ cottage_id }}{% if not loop.last %}, {% endif %}{% endfor %}
                             {% if option.estimated_amount is not none %}
                                 · szacunkowo {{ "{:,.2f}".format(option.estimated_amount).replace(",", " ").replace(".", ",") }} zł,
-                                zaliczka 30%: {{ "{:,.2f}".format(option.deposit_amount).replace(",", " ").replace(".", ",") }} zł
+                                zadatek 30%: {{ "{:,.2f}".format(option.deposit_amount).replace(",", " ").replace(".", ",") }} zł
                             {% else %}
                                 · cena do ręcznego ustalenia
                             {% endif %}
@@ -56,7 +56,14 @@
     <section class="inquiry-template-card">
         <h3>Dane oferty</h3>
         {% if estimated_amount is not none %}
-            <p>Cena orientacyjna z cennika strony: {{ "{:,.2f}".format(estimated_amount).replace(",", " ").replace(".", ",") }} zł. Zaliczka 30%.</p>
+            <p>
+                {% if uses_default_rate %}
+                    Wstępna cena bazowa: {{ "{:,.2f}".format(estimated_amount).replace(",", " ").replace(".", ",") }} zł (dla nieokreślonych miesięcy przyjęto kalkulatorową stawkę 300 zł/noc).
+                {% else %}
+                    Cena bazowa według cennika strony: {{ "{:,.2f}".format(estimated_amount).replace(",", " ").replace(".", ",") }} zł.
+                {% endif %}
+                Możesz zmienić cenę przed wysłaniem. Zadatek 30% przelicza się automatycznie.
+            </p>
             <p>Cena nie obejmuje opłaty miejscowej (3 zł/osoba/noc) ani ewentualnej opłaty za psa (25 zł/doba). Sprawdź te dodatki przed wysłaniem.</p>
         {% else %}
             <p>Nie można automatycznie ustalić ceny dla tego miesiąca — wpisz i zweryfikuj ją ręcznie.</p>
@@ -74,10 +81,10 @@
             </select>
 
             <label for="total_amount">Wartość pobytu (zł)</label>
-            <input id="total_amount" name="total_amount" type="number" min="0.01" step="0.01" required value="{{ total_amount if total_amount is not none else '' }}">
+            <input class="offer-amount-input" id="total_amount" name="total_amount" type="number" min="0.01" step="0.01" required value="{{ total_amount if total_amount is not none else '' }}">
 
-            <label for="deposit_amount">Zaliczka (zł)</label>
-            <input id="deposit_amount" name="deposit_amount" type="number" min="0.01" step="0.01" required readonly value="{{ deposit_amount if deposit_amount is not none else '' }}">
+            <label for="deposit_amount">Zadatek (zł)</label>
+            <input class="offer-amount-input" id="deposit_amount" name="deposit_amount" type="number" min="0.01" step="0.01" required readonly value="{{ deposit_amount if deposit_amount is not none else '' }}">
 
             {% if total_amount is not none and deposit_amount is not none %}
                 <p>Pozostało do zapłaty: {{ "{:,.2f}".format(total_amount - deposit_amount).replace(",", " ").replace(".", ",") }} zł.</p>
@@ -89,27 +96,33 @@
     {% endif %}
 
     {% if message %}
-        <section class="inquiry-template-card">
+    <section class="inquiry-template-card generated-message-card">
             <h3>Wiadomość do skopiowania</h3>
             <p>Wyślij ją ręcznie ze swojej poczty. 48 godzin liczy się od faktycznego wysłania wiadomości.</p>
             <label for="template-recipient">Adres e-mail</label>
-            <input id="template-recipient" type="email" readonly value="{{ inquiry.email }}">
+            <input id="template-recipient" type="email" value="{{ inquiry.email }}">
             <label for="template-subject">Temat</label>
-            <input id="template-subject" readonly value="Wrzosowo 159 — oferta pobytu {{ quote_check_in }}–{{ quote_check_out }}">
+            <input id="template-subject" type="text" value="Wrzosowo 159 — oferta pobytu {{ quote_check_in }}–{{ quote_check_out }}">
             <label for="template-message">Treść</label>
-            <textarea id="template-message" rows="20" readonly>{{ message }}</textarea>
+            <textarea id="template-message" rows="24" spellcheck="true">{{ message }}</textarea>
             <button type="button" class="secondary-button" onclick="document.getElementById('template-message').select(); document.execCommand('copy');">Kopiuj treść</button>
-            {% if current_cottage_ids and cottage %}
-                <p>Po ręcznym wysłaniu tej wiadomości potwierdź to poniżej. System utworzy rezerwację PENDING i zablokuje wybrany domek na 48 godzin.</p>
-                <form method="post" action="/ui/inquiries/{{ inquiry.id }}/send-payment-request" class="send-inquiry-offer-form">
+            {% if current_cottage_ids and cottage and inquiry.status == "IN_PROGRESS" and (not inquiry.message_sent_at or offer_expired) %}
+                {% if offer_expired %}
+                    <p>Poprzednia oferta wygasła. Wyślij ją ponownie, a następnie potwierdź wysłanie, aby odnowić 48-godzinny termin akceptacji.</p>
+                {% else %}
+                    <p>Wyślij wiadomość ręcznie, a następnie potwierdź jej wysłanie. W panelu pojawi się przycisk akceptacji, który utworzy rezerwację i zablokuje termin.</p>
+                {% endif %}
+                <form method="post" action="/ui/inquiries/{{ inquiry.id }}/mark-offer-sent" class="send-inquiry-offer-form">
                     <input type="hidden" name="cottage_id" value="{{ cottage.split(' ')[1] }}">
                     <input type="hidden" name="total_amount" value="{{ total_amount }}">
                     <input type="hidden" name="deposit_amount" value="{{ deposit_amount }}">
                     <input type="hidden" name="check_in" value="{{ quote_check_in }}">
                     <input type="hidden" name="check_out" value="{{ quote_check_out }}">
                     <label><input type="checkbox" name="confirm_sent" value="true" required> Potwierdzam, że wiadomość została wysłana</label>
-                    <button type="submit" class="primary-button">Wysłano — utwórz rezerwację wstępną</button>
+                    <button type="submit" class="secondary-button">{% if offer_expired %}Potwierdź ponowne wysłanie{% else %}Potwierdź wysłanie wiadomości{% endif %}</button>
                 </form>
+            {% elif inquiry.message_sent_at %}
+                <p>Wiadomość potwierdzono jako wysłaną: {{ inquiry.message_sent_at.strftime("%Y-%m-%d %H:%M") }}. Akceptacja oferty jest możliwa do {{ offer_expires_at.strftime("%Y-%m-%d %H:%M") }} w panelu zapytań.</p>
             {% endif %}
         </section>
     {% endif %}

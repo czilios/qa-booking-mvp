@@ -10,7 +10,47 @@
 
     <h2>Dodaj wpływ</h2>
 
+    <form method="get" action="/ui/bank-transactions" class="reservation-lookup-form">
+        <label for="reservation_number">Wczytaj rezerwację Direct</label>
+        <div class="reservation-lookup-controls">
+            <input
+                type="text"
+                id="reservation_number"
+                name="reservation_number"
+                value="{{ reservation_number or '' }}"
+                placeholder="#38832"
+            >
+            <button type="submit">Wczytaj rezerwację</button>
+        </div>
+        <small>Wpisz numer rezerwacji, np. #38832. System podstawi dane oczekiwanego zadatku.</small>
+    </form>
+
+    {% if reservation_lookup_error %}
+        <div class="reservation-lookup-error" role="alert">
+            {{ reservation_lookup_error }}
+        </div>
+    {% endif %}
+
+    {% if reservation_lookup %}
+        <section class="reservation-lookup-summary">
+            <h3>Rezerwacja #{{ reservation_lookup.id }}</h3>
+            <p>
+                Domek {{ reservation_lookup.cottage_id }} ·
+                {{ reservation_lookup.check_in }} – {{ reservation_lookup.check_out }}
+            </p>
+            <p>Wartość pobytu: {{ "{:,.2f}".format(reservation_lookup.total_amount).replace(",", " ").replace(".", ",") }} zł</p>
+            <p>Oczekiwany zadatek: {{ "{:,.2f}".format(reservation_lookup.deposit_amount).replace(",", " ").replace(".", ",") }} zł</p>
+            {% if reservation_lookup.due_at %}
+                <p>Termin zadatku: {{ reservation_lookup.due_at.strftime("%Y-%m-%d %H:%M") }}</p>
+            {% endif %}
+        </section>
+    {% endif %}
+
     <form method="post" action="/ui/bank-transactions">
+
+        {% if reservation_lookup %}
+            <input type="hidden" name="reservation_number" value="#{{ reservation_lookup.id }}">
+        {% endif %}
 
         <div class="form-group">
 
@@ -33,15 +73,20 @@
                 Źródło
             </label>
 
-            <select
-                id="source_id"
-                name="source_id"
-                required
-            >
-                <option value="1">Direct</option>
-                <option value="2">Booking</option>
-                <option value="4">Belvilla</option>
-            </select>
+            {% if reservation_lookup %}
+                <input type="hidden" name="source_id" value="1">
+                <p>Direct</p>
+            {% else %}
+                <select
+                    id="source_id"
+                    name="source_id"
+                    required
+                >
+                    <option value="1">Direct</option>
+                    <option value="2">Booking</option>
+                    <option value="4">Belvilla</option>
+                </select>
+            {% endif %}
 
         </div>
 
@@ -56,11 +101,12 @@
                 name="cottage_id"
             >
                 <option value="">Nie przypisano</option>
-                <option value="1">Domek 1</option>
-                <option value="2">Domek 2</option>
-                <option value="3">Domek 3</option>
-                <option value="4">Domek 4</option>
-                <option value="5">Domek 5</option>
+                <option value="1" {% if reservation_lookup and reservation_lookup.cottage_id == 1 %}selected{% endif %}>Domek 1</option>
+                <option value="2" {% if reservation_lookup and reservation_lookup.cottage_id == 2 %}selected{% endif %}>Domek 2</option>
+                <option value="3" {% if reservation_lookup and reservation_lookup.cottage_id == 3 %}selected{% endif %}>Domek 3</option>
+                <option value="4" {% if reservation_lookup and reservation_lookup.cottage_id == 4 %}selected{% endif %}>Domek 4</option>
+                <option value="5" {% if reservation_lookup and reservation_lookup.cottage_id == 5 %}selected{% endif %}>Domek 5</option>
+                <option value="6" {% if reservation_lookup and reservation_lookup.cottage_id == 6 %}selected{% endif %}>Domek 6</option>
             </select>
 
         </div>
@@ -78,6 +124,7 @@
                 min="0.01"
                 step="0.01"
                 required
+                value="{{ reservation_lookup.deposit_amount if reservation_lookup else '' }}"
             >
 
         </div>

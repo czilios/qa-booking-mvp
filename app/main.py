@@ -21,7 +21,12 @@ from app.reservation_service import cancel_reservation, generate_overall_report,
 from app.customer_service import create_customer, get_customer, update_customer
 from app.availability_service import AvailabilityService
 from app.bank_statement_service import BankStatementReportService
-from app.bank_transaction_service import list_bank_transactions, sum_bank_transactions,create_bank_transaction
+from app.bank_transaction_service import (
+    create_bank_transaction,
+    get_direct_pending_deposit,
+    list_bank_transactions,
+    sum_bank_transactions,
+)
 from app.overall_report_service import (
     generate_cash_flow_report,
     generate_overall_report,
@@ -98,13 +103,33 @@ def estimate_inquiry_stay_price(check_in: date, check_out: date) -> Decimal | No
         rate = (
             Decimal("450.00")
             if night.weekday() in (4, 5) or night in long_weekend_nights
-            else nightly_rates.get(night.month)
+            else nightly_rates.get(night.month, Decimal("300.00"))
         )
-        if rate is None:
-            return None
         amount += rate
         night += timedelta(days=1)
     return amount
+
+
+def inquiry_price_uses_default_rate(check_in: date, check_out: date) -> bool:
+    nightly_rates = {5, 6, 7, 8, 9}
+    premium_nights = set()
+    for year in range(check_in.year, check_out.year + 1):
+        corpus_christi = _easter_sunday(year) + timedelta(days=60)
+        premium_nights.update(date(year, 5, day) for day in (1, 2, 3))
+        premium_nights.update(
+            corpus_christi + timedelta(days=offset) for offset in range(3)
+        )
+
+    night = check_in
+    while night < check_out:
+        if (
+            night.month not in nightly_rates
+            and night.weekday() not in (4, 5)
+            and night not in premium_nights
+        ):
+            return True
+        night += timedelta(days=1)
+    return False
 
 
 def _easter_sunday(year: int) -> date:
@@ -1028,10 +1053,31 @@ def bank_transactions_ui(
     month: int | None = None,
     year: int | None = None,
     notes: str | None = None,
+    reservation_number: str | None = None,
     db_connection=Depends(get_db_connection),
 ):
     transactions = None
     total_amount = None
+    reservation_lookup = None
+    reservation_lookup_error = None
+
+    if reservation_number:
+        try:
+            _, reservation, deposit = get_direct_pending_deposit(
+                db_connection,
+                reservation_number,
+            )
+            reservation_lookup = {
+                "id": reservation["id"],
+                "cottage_id": reservation["cottage_id"],
+                "check_in": reservation["check_in"],
+                "check_out": reservation["check_out"],
+                "total_amount": reservation["total_amount"],
+                "deposit_amount": deposit["amount"],
+                "due_at": deposit["due_at"],
+            }
+        except ValueError as exc:
+            reservation_lookup_error = str(exc)
 
     if month is not None and year is not None:
         if month == 12:
@@ -1064,6 +1110,9 @@ def bank_transactions_ui(
             "year": year,
             "transactions": transactions,
             "total_amount": total_amount,
+            "reservation_number": reservation_number,
+            "reservation_lookup": reservation_lookup,
+            "reservation_lookup_error": reservation_lookup_error,
         },
     )
 
@@ -1075,6 +1124,7 @@ def create_bank_transaction_ui(
     amount: Decimal = Form(...),
     description: str | None = Form(None),
     notes: str | None = Form(None),
+    reservation_number: str | None = Form(None),
     db_connection=Depends(get_db_connection),
 ):
     try:
@@ -1086,6 +1136,7 @@ def create_bank_transaction_ui(
             amount=amount,
             description=description,
             notes=notes,
+            reservation_number=reservation_number,
         )
 
         db_connection.commit()
@@ -1115,11 +1166,33 @@ def web_inquiries_ui(
 ):
     expire_payment_holds(db_connection)
     inquiries = WebInquiryRepository(db_connection).list_all()
+    for inquiry in inquiries:
+        inquiry["offer_expires_at"] = (
+            inquiry["message_sent_at"] + timedelta(hours=48)
+            if inquiry["message_sent_at"] is not None
+            else None
+        )
+        inquiry["offer_expired"] = (
+            inquiry["offer_expires_at"] is not None
+            and inquiry["offer_expires_at"] <= datetime.now()
+        )
+    active_inquiries = [
+        inquiry
+        for inquiry in inquiries
+        if inquiry["status"] in {"NEW", "IN_PROGRESS"}
+    ]
+    resolved_inquiries = [
+        inquiry
+        for inquiry in inquiries
+        if inquiry["status"] not in {"NEW", "IN_PROGRESS"}
+    ]
     return templates.TemplateResponse(
         request=request,
         name="web_inquiries.html",
         context={
             "inquiries": inquiries,
+            "active_inquiries": active_inquiries,
+            "resolved_inquiries": resolved_inquiries,
         },
     )
 
@@ -1146,10 +1219,14 @@ def web_inquiry_template_ui(
     if inquiry is None:
         raise HTTPException(status_code=404, detail="Inquiry not found")
 
-    quote_check_in = check_in or inquiry["check_in"]
-    quote_check_out = check_out or inquiry["check_out"]
+    quote_check_in = check_in or inquiry["offered_check_in"] or inquiry["check_in"]
+    quote_check_out = check_out or inquiry["offered_check_out"] or inquiry["check_out"]
     if quote_check_out <= quote_check_in:
         raise HTTPException(status_code=422, detail="Invalid quote dates")
+    same_as_saved_offer = (
+        quote_check_in == inquiry["offered_check_in"]
+        and quote_check_out == inquiry["offered_check_out"]
+    )
 
     availability_service = AvailabilityService(
         reservation_repository=ReservationRepository(db_connection),
@@ -1210,10 +1287,22 @@ def web_inquiry_template_ui(
     estimated_amount = estimate_inquiry_stay_price(
         quote_check_in, quote_check_out
     )
-    if total_amount is None and estimated_amount is not None:
-        total_amount = estimated_amount
+    if total_amount is None:
+        total_amount = (
+            inquiry["offered_total_amount"]
+            if same_as_saved_offer
+            else estimated_amount
+        )
+    if deposit_amount is None and same_as_saved_offer:
+        deposit_amount = inquiry["offered_deposit_amount"]
     if deposit_amount is None and total_amount is not None:
         deposit_amount = calculate_deposit(total_amount)
+    if (
+        not cottage
+        and same_as_saved_offer
+        and inquiry["offered_cottage_id"] in current_cottage_ids
+    ):
+        cottage = f"Domek {inquiry['offered_cottage_id']}"
 
     available_cottage_names = {
         f"Domek {cottage_id}" for cottage_id in current_cottage_ids
@@ -1254,16 +1343,16 @@ def web_inquiry_template_ui(
             f"{quote_dates_text} dla {inquiry['guests_count']} osób.\n\n"
             f"Wskazany domek jest obecnie dostępny; dostępność wymaga końcowego potwierdzenia.\n\n"
             f"Szacunkowa wartość pobytu: {format_amount(total_amount)} zł.\n"
-            f"Zaliczka (30%): {format_amount(deposit_amount)} zł.\n"
+            f"Zadatek (30%): {format_amount(deposit_amount)} zł.\n"
             f"Pozostała kwota: {format_amount(balance)} zł.\n\n"
-            "Prosimy o wpłatę zaliczki w ciągu 48 godzin od wysłania tej wiadomości. "
+            "Prosimy o wpłatę zadatku w ciągu 48 godzin od wysłania tej wiadomości. "
             "Po wykonaniu przelewu prosimy o przesłanie potwierdzenia wpłaty. "
             "Rezerwacja zostanie potwierdzona po otrzymaniu wpłaty i końcowym "
             "potwierdzeniu dostępności.\n\n"
             "Dane do przelewu:\n"
             "Wrzosowo 159\n"
             "ING: 62 1050 1520 1000 0091 3978 0382\n"
-            f"Tytuł przelewu: zaliczka, {inquiry['full_name']}, "
+            f"Tytuł przelewu: zadatek, {inquiry['full_name']}, "
             f"{quote_check_in.strftime('%d.%m.%Y')}–"
             f"{quote_check_out.strftime('%d.%m.%Y')}\n\n"
             "Opłata miejscowa: 3 zł za osobę za noc, płatna na miejscu.\n"
@@ -1285,14 +1374,26 @@ def web_inquiry_template_ui(
             "alternative_cottage_ids": alternative_cottage_ids,
             "alternative_dates": alternative_dates,
             "estimated_amount": estimated_amount,
+            "uses_default_rate": inquiry_price_uses_default_rate(
+                quote_check_in, quote_check_out
+            ),
             "quote_check_in": quote_check_in,
             "quote_check_out": quote_check_out,
+            "offer_expires_at": (
+                inquiry["message_sent_at"] + timedelta(hours=48)
+                if inquiry["message_sent_at"] is not None
+                else None
+            ),
+            "offer_expired": (
+                inquiry["message_sent_at"] is not None
+                and inquiry["message_sent_at"] + timedelta(hours=48) <= datetime.now()
+            ),
         },
     )
 
 
-@app.post("/ui/inquiries/{inquiry_id}/send-payment-request")
-def send_inquiry_payment_request_ui(
+@app.post("/ui/inquiries/{inquiry_id}/mark-offer-sent")
+def mark_inquiry_offer_sent_ui(
     inquiry_id: int,
     cottage_id: int = Form(...),
     total_amount: Decimal = Form(..., gt=0),
@@ -1314,9 +1415,7 @@ def send_inquiry_payment_request_ui(
     inquiry_repository = WebInquiryRepository(db_connection)
     reservation_repository = ReservationRepository(db_connection)
     cottage_repository = CottageRepository(db_connection)
-    now = datetime.now()
-    expires_at = now + timedelta(hours=48)
-
+    now = datetime.now().replace(microsecond=0)
     try:
         inquiry = inquiry_repository.get_by_id_for_update(inquiry_id)
         if inquiry is None:
@@ -1350,6 +1449,74 @@ def send_inquiry_payment_request_ui(
         if cottage_id not in available_cottage_ids:
             raise HTTPException(status_code=409, detail="Cottage is no longer available")
 
+        sent_at = datetime.now().replace(microsecond=0)
+        inquiry_repository.save_sent_offer(
+            inquiry_id=inquiry_id,
+            cottage_id=cottage_id,
+            check_in=check_in,
+            check_out=check_out,
+            total_amount=total_amount,
+            deposit_amount=deposit_amount,
+            message_sent_at=sent_at,
+        )
+        db_connection.commit()
+    except HTTPException:
+        db_connection.rollback()
+        raise
+    except Exception:
+        db_connection.rollback()
+        raise
+
+    return RedirectResponse(
+        url=f"/ui/inquiries#inquiry-{inquiry_id}",
+        status_code=303,
+    )
+
+
+@app.post("/ui/inquiries/{inquiry_id}/accept")
+def accept_web_inquiry_ui(
+    inquiry_id: int,
+    db_connection=Depends(get_db_connection),
+):
+    inquiry_repository = WebInquiryRepository(db_connection)
+    reservation_repository = ReservationRepository(db_connection)
+    cottage_repository = CottageRepository(db_connection)
+    now = datetime.now().replace(microsecond=0)
+
+    try:
+        inquiry = inquiry_repository.get_by_id_for_update(inquiry_id)
+        if inquiry is None:
+            raise HTTPException(status_code=404, detail="Inquiry not found")
+        if inquiry["status"] != "IN_PROGRESS" or inquiry["reservation_id"] is not None:
+            raise HTTPException(status_code=409, detail="Inquiry cannot be accepted")
+        if inquiry["message_sent_at"] is None or inquiry["offered_cottage_id"] is None:
+            raise HTTPException(status_code=409, detail="Send and confirm the offer first")
+
+        expires_at = inquiry["message_sent_at"] + timedelta(hours=48)
+        if expires_at <= now:
+            raise HTTPException(status_code=409, detail="Offer expired; send it again before accepting")
+
+        cottage_id = inquiry["offered_cottage_id"]
+        cottage = cottage_repository.get_by_id_for_update(cottage_id)
+        if cottage is None or not cottage["active"]:
+            raise HTTPException(status_code=409, detail="Cottage is unavailable")
+        if inquiry["guests_count"] > cottage["capacity"]:
+            raise HTTPException(status_code=409, detail="Cottage capacity is too small")
+
+        reservation_repository.expire_pending_reservations(now)
+        availability_service = AvailabilityService(
+            reservation_repository=reservation_repository,
+            block_repository=BlockRepository(db_connection),
+            cottage_repository=cottage_repository,
+        )
+        available_cottage_ids = availability_service.get_available_cottages(
+            check_in=inquiry["offered_check_in"],
+            check_out=inquiry["offered_check_out"],
+            guests_count=inquiry["guests_count"],
+        )
+        if cottage_id not in available_cottage_ids:
+            raise HTTPException(status_code=409, detail="Cottage is no longer available")
+
         first_name, _, last_name = inquiry["full_name"].strip().partition(" ")
         customer_id = CustomerRepository(db_connection).create(
             first_name=first_name,
@@ -1369,19 +1536,19 @@ def send_inquiry_payment_request_ui(
             cottage_id=cottage_id,
             customer_id=customer_id,
             source_id=direct_source["id"],
-            check_in=check_in,
-            check_out=check_out,
+            check_in=inquiry["offered_check_in"],
+            check_out=inquiry["offered_check_out"],
             guests_count=inquiry["guests_count"],
             status="PENDING",
             expires_at=expires_at,
-            total_amount=total_amount,
-            deposit_amount=deposit_amount,
+            total_amount=inquiry["offered_total_amount"],
+            deposit_amount=inquiry["offered_deposit_amount"],
             notes=f"Rezerwacja z zapytania WWW #{inquiry_id}",
         )
         PaymentRepository(db_connection).create_payment(
             reservation_id=reservation_id,
             payment_type="DEPOSIT",
-            amount=deposit_amount,
+            amount=inquiry["offered_deposit_amount"],
             status="UNPAID",
             due_at=expires_at,
         )

@@ -73,6 +73,12 @@ class WebInquiryRepository:
                     web_inquiries.available_cottage_ids,
                     web_inquiries.status,
                     web_inquiries.reservation_id,
+                    web_inquiries.offered_cottage_id,
+                    web_inquiries.offered_check_in,
+                    web_inquiries.offered_check_out,
+                    web_inquiries.offered_total_amount,
+                    web_inquiries.offered_deposit_amount,
+                    web_inquiries.message_sent_at,
                     web_inquiries.created_at,
                     r.status AS reservation_status,
                     r.expires_at AS reservation_expires_at
@@ -108,7 +114,9 @@ class WebInquiryRepository:
                 """
                 SELECT
                     id, full_name, phone, email, check_in, check_out,
-                    guests_count, preferred_cottage_id, status, reservation_id
+                    guests_count, preferred_cottage_id, status, reservation_id,
+                    offered_cottage_id, offered_check_in, offered_check_out,
+                    offered_total_amount, offered_deposit_amount, message_sent_at
                 FROM web_inquiries
                 WHERE id = %s
                 FOR UPDATE
@@ -116,6 +124,41 @@ class WebInquiryRepository:
                 (inquiry_id,),
             )
             return cursor.fetchone()
+
+    def save_sent_offer(
+        self,
+        inquiry_id: int,
+        cottage_id: int,
+        check_in: date,
+        check_out: date,
+        total_amount,
+        deposit_amount,
+        message_sent_at,
+    ) -> None:
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE web_inquiries
+                SET offered_cottage_id = %s,
+                    offered_check_in = %s,
+                    offered_check_out = %s,
+                    offered_total_amount = %s,
+                    offered_deposit_amount = %s,
+                    message_sent_at = %s
+                WHERE id = %s AND status = 'IN_PROGRESS' AND reservation_id IS NULL
+                """,
+                (
+                    cottage_id,
+                    check_in,
+                    check_out,
+                    total_amount,
+                    deposit_amount,
+                    message_sent_at,
+                    inquiry_id,
+                ),
+            )
+            if cursor.rowcount != 1:
+                raise ValueError("Inquiry cannot accept an offer")
 
     def convert_to_reservation(
         self,
