@@ -5,7 +5,7 @@ from app.repositories.customer_repository import CustomerRepository
 from app.repositories.reservation_repository import ReservationRepository
 
 from app.main import app
-from app.database import get_connection
+from app.database import get_test_connection
 
 def test_create_reservation_returns_201(api_client, db_connection):
     response = api_client.post(
@@ -231,7 +231,7 @@ def test_create_ui_reservation_returns_303(
 
     assert response.status_code == 303
 
-    connection = get_connection()
+    connection = get_test_connection()
 
     try:
         customer_repository = CustomerRepository(connection)
@@ -298,7 +298,7 @@ def test_create_ui_reservation_persists_data(
 
     assert response.status_code == 303
 
-    connection = get_connection()
+    connection = get_test_connection()
 
     try:
         customer_repository = CustomerRepository(connection)

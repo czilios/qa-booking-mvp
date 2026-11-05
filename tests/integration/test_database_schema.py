@@ -1,4 +1,9 @@
-from app.database import get_connection
+import pytest
+
+from app.database import get_test_connection
+
+
+pytestmark = pytest.mark.db
 
 
 def test_required_tables_exist():
@@ -8,7 +13,7 @@ def test_required_tables_exist():
         "reservations",
     }
 
-    connection = get_connection()
+    connection = get_test_connection()
 
     try:
         with connection.cursor() as cursor:
@@ -27,7 +32,7 @@ def test_required_tables_exist():
 
 
 def test_database_contains_six_cottages():
-    connection = get_connection()
+    connection = get_test_connection()
 
     try:
         with connection.cursor() as cursor:
@@ -41,7 +46,7 @@ def test_database_contains_six_cottages():
 
 
 def test_all_cottages_have_capacity_four():
-    connection = get_connection()
+    connection = get_test_connection()
 
     try:
         with connection.cursor() as cursor:
@@ -62,7 +67,7 @@ def test_all_cottages_have_capacity_four():
 
 
 def test_all_cottages_are_active():
-    connection = get_connection()
+    connection = get_test_connection()
 
     try:
         with connection.cursor() as cursor:

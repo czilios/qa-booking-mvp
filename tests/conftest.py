@@ -1,26 +1,64 @@
 import pytest
 import inspect
 
-from app.database import get_connection
+from app.database import get_test_connection
 from app.repositories.reservation_repository import ReservationRepository
 
 
-@pytest.fixture(autouse=True)
+def _apply_test_data_default(kwargs, is_test_data_explicit):
+    if not is_test_data_explicit:
+        kwargs["is_test_data"] = True
+    return kwargs
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--run-db-tests",
+        action="store_true",
+        default=False,
+        help="run tests that require the dedicated MariaDB test database",
+    )
+
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "db: requires the dedicated MariaDB test database",
+    )
+
+
+def pytest_report_header(config):
+    if not config.getoption("--run-db-tests"):
+        return "Database-dependent tests are deselected; pass --run-db-tests to request them."
+
+
+def pytest_collection_modifyitems(config, items):
+    if config.getoption("--run-db-tests"):
+        return
+
+    selected_items = []
+    deselected_items = []
+    for item in items:
+        if "db" in item.keywords or "db_connection" in item.fixturenames:
+            deselected_items.append(item)
+        else:
+            selected_items.append(item)
+
+    if deselected_items:
+        config.hook.pytest_deselected(items=deselected_items)
+        items[:] = selected_items
+
+
+@pytest.fixture
 def mark_repository_created_reservations_as_test_data(monkeypatch):
     original_create = ReservationRepository.create
     sig = inspect.signature(original_create)
 
     def create_test_reservation(repository, *args, **kwargs):
-        # Bindujemy przekazane argumenty do sygnatury metody create
         bound_args = sig.bind(repository, *args, **kwargs)
+        is_test_data_explicit = "is_test_data" in bound_args.arguments
         bound_args.apply_defaults()
-        
-        # Jeśli is_test_data nie zostało jawnie przekazane (lub ma wartość domyślną z metody, np. False)
-        # i chcemy wymusić w testach True:
-        if bound_args.arguments.get('is_test_data') is not False:
-            kwargs['is_test_data'] = True
-        else:
-            kwargs['is_test_data'] = False
+        _apply_test_data_default(kwargs, is_test_data_explicit)
 
         return original_create(repository, *args, **kwargs)
 
@@ -31,8 +69,11 @@ def mark_repository_created_reservations_as_test_data(monkeypatch):
     )
 
 @pytest.fixture
-def db_connection():
-    connection = get_connection()
+def db_connection(monkeypatch, mark_repository_created_reservations_as_test_data):
+    from app import main
+
+    monkeypatch.setattr(main, "get_connection", get_test_connection)
+    connection = get_test_connection()
 
     try:
         connection.begin()
