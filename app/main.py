@@ -215,6 +215,19 @@ def get_db_connection():
         connection.close()
 
 
+def get_api_write_connection():
+    connection = get_connection()
+
+    try:
+        yield connection
+        connection.commit()
+    except BaseException:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+
+
 def expire_payment_holds(db_connection) -> int:
     expired_count = ReservationRepository(db_connection).expire_pending_reservations(
         datetime.now()
@@ -457,7 +470,7 @@ def overall_report_ui(
 @app.post("/api/reservations", status_code=201)
 def create_reservation_endpoint(
     reservation: ReservationCreate,
-    db_connection=Depends(get_db_connection),
+    db_connection=Depends(get_api_write_connection, scope="function"),
 ):
     try:
         return create_reservation(
@@ -486,7 +499,7 @@ def create_reservation_endpoint(
 def update_reservation_endpoint(
     reservation_id: int,
     reservation: ReservationUpdate,
-    db_connection=Depends(get_db_connection),
+    db_connection=Depends(get_api_write_connection, scope="function"),
 ):
     if reservation.check_out <= reservation.check_in:
         raise HTTPException(
@@ -539,7 +552,7 @@ def get_reservation_endpoint(
 @app.delete("/api/reservations/{reservation_id}", status_code=204)
 def cancel_reservation_endpoint(
     reservation_id: int,
-    db_connection=Depends(get_db_connection),
+    db_connection=Depends(get_api_write_connection, scope="function"),
 ):
     try:
         cancel_reservation(
@@ -561,7 +574,7 @@ def cancel_reservation_endpoint(
 @app.post("/api/payments", status_code=201)
 def create_payment_endpoint(
     payment: PaymentCreate,
-    db_connection=Depends(get_db_connection),
+    db_connection=Depends(get_api_write_connection, scope="function"),
 ):
     try:
         return create_payment(
@@ -626,7 +639,7 @@ def get_payment_endpoint(
 def mark_payment_as_paid_endpoint(
     payment_id: int,
     payment: PaymentPaid,
-    db_connection=Depends(get_db_connection),
+    db_connection=Depends(get_api_write_connection, scope="function"),
 ):
     try:
         mark_payment_as_paid(
@@ -651,7 +664,7 @@ def mark_payment_as_paid_endpoint(
 @app.post("/api/customers", status_code=201)
 def create_customer_endpoint(
     customer: CustomerCreate,
-    db_connection=Depends(get_db_connection),
+    db_connection=Depends(get_api_write_connection, scope="function"),
 ):
     try:
         customer_id = create_customer(
@@ -696,7 +709,7 @@ def get_customer_endpoint(
 def update_customer_endpoint(
     customer_id: int,
     customer: CustomerCreate,
-    db_connection=Depends(get_db_connection),
+    db_connection=Depends(get_api_write_connection, scope="function"),
 ):
     try:
         return update_customer(
