@@ -223,6 +223,8 @@ def test_create_ui_reservation_returns_303(
             "cottage_id": 1,
             "check_in": "2029-06-10",
             "check_out": "2029-06-17",
+            "first_name": "Jan",
+            "last_name": "Testowy",
             "phone": phone,
             "guests_count": 2,
         },
@@ -290,6 +292,8 @@ def test_create_ui_reservation_persists_data(
             "cottage_id": 1,
             "check_in": "2029-06-10",
             "check_out": "2029-06-17",
+            "first_name": "Jan",
+            "last_name": "Testowy",
             "phone": phone,
             "guests_count": 2,
         },
@@ -343,6 +347,64 @@ def test_create_ui_reservation_persists_data(
 
     finally:
         connection.close()
+
+
+def test_create_ui_reservation_accepts_email_only(
+    api_client, db_connection, created_reservation_cleanup,
+):
+    response = api_client.post(
+        "/ui/reservations",
+        data={
+            "cottage_id": 1,
+            "check_in": "2049-06-10",
+            "check_out": "2049-06-17",
+            "first_name": "Anna",
+            "last_name": "Testowa",
+            "email": "anna@example.test",
+            "guests_count": 2,
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    reservation_id = int(response.headers["location"].split("reservation_created=")[1])
+    created_reservation_cleanup["reservation_ids"].append(reservation_id)
+    reservation = ReservationRepository(db_connection).get_by_id(reservation_id)
+    created_reservation_cleanup["customer_ids"].append(reservation["customer_id"])
+    customer = CustomerRepository(db_connection).get_by_id(reservation["customer_id"])
+    assert customer["first_name"] == "Anna"
+    assert customer["last_name"] == "Testowa"
+    assert customer["phone"] is None
+    assert customer["email"] == "anna@example.test"
+
+
+def test_create_ui_reservation_rejects_missing_customer_details(api_client):
+    data = {
+        "cottage_id": 1,
+        "check_in": "2049-07-10",
+        "check_out": "2049-07-17",
+        "first_name": "Jan",
+        "last_name": "Testowy",
+        "guests_count": 2,
+    }
+    for overrides in (
+        {"phone": "", "email": ""},
+        {"first_name": "   ", "phone": "+48600111222"},
+        {"last_name": "   ", "phone": "+48600111222"},
+    ):
+        response = api_client.post(
+            "/ui/reservations", data={**data, **overrides}, follow_redirects=False
+        )
+        assert response.status_code == 409
+
+
+def test_ui_reservation_form_contains_customer_fields(api_client):
+    response = api_client.get(
+        "/ui", params={"check_in": "2049-08-10", "check_out": "2049-08-17", "cottage_id": 1}
+    )
+    assert response.status_code == 200
+    for field in ("first_name", "last_name", "phone", "email"):
+        assert f'name="{field}"' in response.text
+
 
 def test_ui_displays_created_reservation_id(api_client):
     response = api_client.get(

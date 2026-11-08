@@ -4,8 +4,8 @@ def test_get_customer_by_phone(db_connection):
     repository = CustomerRepository(db_connection)
 
     customer_id = repository.create(
-        first_name=None,
-        last_name=None,
+        first_name="Jan",
+        last_name="Testowy",
         phone="791443376",
         email=None,
     )

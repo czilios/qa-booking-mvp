@@ -142,19 +142,23 @@
             >
 
             <div class="form-group">
+                <label for="first_name">Imię</label>
+                <input type="text" id="first_name" name="first_name" autocomplete="given-name" required>
+            </div>
 
-                <label for="phone">
-                    Numer telefonu
-                </label>
+            <div class="form-group">
+                <label for="last_name">Nazwisko</label>
+                <input type="text" id="last_name" name="last_name" autocomplete="family-name" required>
+            </div>
 
-                <input
-                    type="tel"
-                    id="phone"
-                    name="phone"
-                    placeholder="+48 600 000 000"
-                    required
-                >
+            <div class="form-group">
+                <label for="phone">Numer telefonu</label>
+                <input type="tel" id="phone" name="phone" autocomplete="tel" placeholder="+48 600 000 000">
+            </div>
 
+            <div class="form-group">
+                <label for="email">E-mail</label>
+                <input type="email" id="email" name="email" autocomplete="email">
             </div>
 
             <div class="form-group">
@@ -247,6 +251,18 @@
     checkIn.addEventListener("change", updateCheckoutMin);
 
     updateCheckoutMin();
+
+    const phone = document.getElementById("phone");
+    const email = document.getElementById("email");
+    if (phone && email) {
+        function updateContactRequired() {
+            phone.required = !email.value.trim();
+            email.required = !phone.value.trim();
+        }
+        phone.addEventListener("input", updateContactRequired);
+        email.addEventListener("input", updateContactRequired);
+        updateContactRequired();
+    }
 </script>
 
 {% endblock %}

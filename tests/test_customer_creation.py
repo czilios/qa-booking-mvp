@@ -58,16 +58,20 @@ def test_create_customer_accepts_german_phone_number(db_connection):
 
 
 def test_create_customer_rejects_empty_phone(db_connection):
-    with pytest.raises(ValueError, match="Phone is required"):
+    with pytest.raises(ValueError, match="Phone or email is required"):
         create_customer(
             connection=db_connection,
+            first_name="Jan",
+            last_name="Kowalski",
             phone="",
         )
 
 def test_create_customer_rejects_whitespace_only_phone(db_connection):
-    with pytest.raises(ValueError, match="Phone is required"):
+    with pytest.raises(ValueError, match="Phone or email is required"):
         create_customer(
             connection=db_connection,
+            first_name="Jan",
+            last_name="Kowalski",
             phone="   ",
         )
 
@@ -89,6 +93,8 @@ def test_create_customer_normalizes_phone_format(db_connection):
 def test_create_customer_with_phone_only(db_connection):
     customer_id = create_customer(
         connection=db_connection,
+        first_name="Jan",
+        last_name="Kowalski",
         phone="+48 791-443-376",
     )
 

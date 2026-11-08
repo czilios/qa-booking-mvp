@@ -632,11 +632,13 @@ def test_sales_report_includes_customer_phone(
         cursor.execute(
             """
             INSERT INTO customers (
+                first_name,
+                last_name,
                 phone
             )
-            VALUES (%s)
+            VALUES (%s, %s, %s)
             """,
-            (customer_phone,),
+            ("Jan", "Testowy", customer_phone),
         )
 
         customer_id = cursor.lastrowid

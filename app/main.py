@@ -18,7 +18,7 @@ from app.reservation_service import create_reservation, generate_bank_statement_
 
 from app.payment_service import create_payment, mark_payment_as_paid, generate_payment_report
 from app.reservation_service import cancel_reservation, generate_overall_report, create_historical_reservation
-from app.customer_service import create_customer, get_customer, update_customer
+from app.customer_service import create_customer, get_customer, normalize_phone, update_customer, validate_customer_details
 from app.availability_service import AvailabilityService
 from app.bank_statement_service import BankStatementReportService
 from app.bank_transaction_service import (
@@ -147,9 +147,9 @@ def _easter_sunday(year: int) -> date:
     return date(year, month, day)
 
 class CustomerCreate(BaseModel):
-    phone: str
-    first_name: str | None = None
-    last_name: str | None = None
+    phone: str | None = None
+    first_name: str
+    last_name: str
     email: str | None = None
 
 class ReservationCreate(BaseModel):
@@ -792,20 +792,27 @@ def create_ui_reservation(
     cottage_id: int = Form(...),
     check_in: date = Form(...),
     check_out: date = Form(...),
-    phone: str = Form(...),
+    first_name: str = Form(...),
+    last_name: str = Form(...),
     guests_count: int = Form(...),
+    phone: str | None = Form(None),
+    email: str | None = Form(None),
     db_connection=Depends(get_db_connection),
 ):
     try:
+        first_name, last_name, phone, email = validate_customer_details(
+            first_name, last_name, phone, email
+        )
         customer_repository = CustomerRepository(db_connection)
-
-        # Na tym etapie szukamy klienta po numerze telefonu.
-        customer = customer_repository.get_by_phone(phone)
+        customer = customer_repository.get_by_phone(phone) if phone else None
 
         if customer is None:
             customer_id = create_customer(
                 connection=db_connection,
+                first_name=first_name,
+                last_name=last_name,
                 phone=phone,
+                email=email,
             )
         else:
             customer_id = customer["id"]
@@ -1014,26 +1021,32 @@ def create_historical_ui_reservation(
     guests_count: int = Form(...),
     total_amount: Decimal = Form(...),
     phone: str | None = Form(None),
+    first_name: str | None = Form(None),
+    last_name: str | None = Form(None),
     notes: str | None = Form(None),
     commission_amount: Decimal | None = Form(None),
     db_connection=Depends(get_db_connection),
 ):
-    customer_id = None
-
-    if phone:
-        customer_repository = CustomerRepository(db_connection)
-
-        customer = customer_repository.get_by_phone(phone)
-
-        if customer is None:
-            customer_id = create_customer(
-                connection=db_connection,
-                phone=phone,
-            )
-        else:
-            customer_id = customer["id"]
-
     try:
+        customer_id = None
+        normalized_phone = normalize_phone(phone.strip()) if phone and phone.strip() else None
+        if normalized_phone:
+            customer_repository = CustomerRepository(db_connection)
+            customer = customer_repository.get_by_phone(normalized_phone)
+
+            if customer is None:
+                try:
+                    customer_id = create_customer(
+                        connection=db_connection,
+                        first_name=first_name,
+                        last_name=last_name,
+                        phone=normalized_phone,
+                    )
+                except ValueError as exc:
+                    raise HTTPException(status_code=400, detail=str(exc)) from exc
+            else:
+                customer_id = customer["id"]
+
         reservation_id = create_historical_reservation(
             connection=db_connection,
             customer_id=customer_id,
@@ -1049,11 +1062,18 @@ def create_historical_ui_reservation(
 
         db_connection.commit()
 
+    except HTTPException:
+        db_connection.rollback()
+        raise
     except ValueError as exc:
+        db_connection.rollback()
         raise HTTPException(
             status_code=409,
             detail=str(exc),
         )
+    except Exception:
+        db_connection.rollback()
+        raise
 
     return RedirectResponse(
         url=f"/ui/reservations/{reservation_id}",
