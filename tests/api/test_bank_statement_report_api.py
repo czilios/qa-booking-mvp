@@ -22,6 +22,7 @@ def test_bank_statement_report_includes_completed_booking_reservations(
         status="CONFIRMED",
         total_amount=Decimal("2100.00"),
         accounting_included=True,
+        is_test_data=False,
     )
 
     created_reservation_cleanup["reservation_ids"].append(
@@ -78,6 +79,7 @@ def test_bank_statement_report_respects_date_boundaries(
         status="CONFIRMED",
         total_amount=Decimal("2100.00"),
         accounting_included=True,
+        is_test_data=False,
     )
 
     created_reservation_cleanup["reservation_ids"].append(
@@ -116,6 +118,7 @@ def test_bank_statement_report_respects_accounting_included(
         status="CONFIRMED",
         total_amount=Decimal("2100.00"),
         accounting_included=True,
+        is_test_data=False,
     )
 
     excluded_reservation_id = reservation_repository.create(
@@ -200,6 +203,51 @@ def test_bank_statement_report_excludes_non_accounting_reservation(
     }
 
     assert reservation_id not in reservation_ids
+
+
+def test_bank_statement_report_excludes_test_reservations_and_keeps_real_ones(
+    db_connection,
+    api_client,
+    created_reservation_cleanup,
+):
+    repository = ReservationRepository(db_connection)
+    test_reservation_id = repository.create(
+        cottage_id=1,
+        source_id=2,
+        check_in=date(2027, 10, 10),
+        check_out=date(2027, 10, 17),
+        guests_count=2,
+        status="CONFIRMED",
+        total_amount=Decimal("2100.00"),
+        accounting_included=True,
+        is_test_data=True,
+    )
+    real_reservation_id = repository.create(
+        cottage_id=2,
+        source_id=2,
+        check_in=date(2027, 10, 10),
+        check_out=date(2027, 10, 17),
+        guests_count=2,
+        status="CONFIRMED",
+        total_amount=Decimal("1800.00"),
+        accounting_included=True,
+        is_test_data=False,
+    )
+    created_reservation_cleanup["reservation_ids"].extend(
+        [test_reservation_id, real_reservation_id]
+    )
+    db_connection.commit()
+
+    response = api_client.get(
+        "/api/bank-statement-report",
+        params={"start_date": "2027-10-01", "end_date": "2027-11-01"},
+    )
+
+    assert response.status_code == 200
+    reservation_ids = {row["id"] for row in response.json()["reservations"]}
+    assert test_reservation_id not in reservation_ids
+    assert real_reservation_id in reservation_ids
+
 
 def test_bank_statement_report_ui_get(
     api_client,

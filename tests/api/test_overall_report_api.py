@@ -13,6 +13,7 @@ def test_overall_report_includes_reservation(
     reservation_repository = ReservationRepository(db_connection)
 
     reservation_id = reservation_repository.create(
+        is_test_data=False,
         cottage_id=1,
         source_id=4,  # BELVILLA
         check_in=date(2044, 10, 10),
@@ -61,6 +62,7 @@ def test_overall_report_includes_all_sources(
 
     for source_id in [1, 2, 4]:
         reservation_id = reservation_repository.create(
+            is_test_data=False,
             cottage_id=1,
             source_id=source_id,
             check_in=date(2027, 10, 10),
@@ -107,6 +109,7 @@ def test_overall_report_includes_non_accounting_reservation(
     reservation_repository = ReservationRepository(db_connection)
 
     reservation_id = reservation_repository.create(
+        is_test_data=False,
         cottage_id=1,
         source_id=4,  # BELVILLA
         check_in=date(2027, 10, 10),

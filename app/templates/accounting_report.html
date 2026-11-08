@@ -160,6 +160,27 @@
                     </table>
                 </div>
 
+                {% if report.manual_review %}
+                <h3>Wymaga ręcznej weryfikacji</h3>
+                <div class="report-table-wrapper">
+                    <table class="report-table">
+                        <thead>
+                            <tr><th>Data</th><th>Transakcja</th><th>Kwota</th><th>Powód</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in report.manual_review %}
+                            <tr>
+                                <td>{{ transaction.transaction_date }}</td>
+                                <td>{{ transaction.id }}</td>
+                                <td>{{ "{:,.2f}".format(transaction.amount).replace(",", " ").replace(".", ",") }} zł</td>
+                                <td>{{ transaction.reason }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+
                 <div class="report-summary screen-only">
                     <div class="report-summary-card">
                         <span class="label">Suma {{ report.month_name_genitive }} — brutto</span>

@@ -86,6 +86,7 @@ def test_accounting_report_ui_displays_booking_reservation(
     repository = ReservationRepository(db_connection)
 
     reservation_id = repository.create(
+        is_test_data=False,
         cottage_id=1,
         source_id=2,
         check_in=date(2032, 10, 10),
@@ -132,6 +133,7 @@ def test_accounting_report_ui_displays_direct_and_booking(
     created_bank_transaction_cleanup.append(transaction_id)
 
     reservation_id = reservation_repository.create(
+        is_test_data=False,
         cottage_id=2,
         source_id=2,
         check_in=date(2032, 10, 15),
@@ -216,6 +218,7 @@ def test_accounting_report_calculates_booking_row_net_and_vat(
     repository = ReservationRepository(db_connection)
 
     reservation_id = repository.create(
+        is_test_data=False,
         cottage_id=1,
         source_id=2,
         check_in=date(2032, 10, 10),
@@ -262,6 +265,7 @@ def test_accounting_report_totals_sum_row_values(
     created_bank_transaction_cleanup.append(transaction_id)
 
     reservation_id = reservation_repository.create(
+        is_test_data=False,
         cottage_id=2,
         source_id=2,
         check_in=date(2032, 10, 15),

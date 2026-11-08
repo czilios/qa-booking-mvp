@@ -102,6 +102,7 @@ def test_cancel_already_cancelled_reservation_returns_409(
 def test_cancel_reservation_returns_204(
     api_client,
     db_connection,
+    created_reservation_cleanup,
 ):
     reservation_repository = ReservationRepository(db_connection)
 
@@ -112,6 +113,7 @@ def test_cancel_reservation_returns_204(
         check_out=date(2032, 7, 17),
         guests_count=2,
     )
+    created_reservation_cleanup["reservation_ids"].append(reservation_id)
 
     db_connection.commit()
 
@@ -204,6 +206,7 @@ def test_cancel_nonexistent_reservation_returns_404(
 def test_cancel_already_cancelled_reservation_returns_error(
     api_client,
     db_connection,
+    created_reservation_cleanup,
 ):
     reservation_repository = ReservationRepository(db_connection)
 
@@ -214,6 +217,7 @@ def test_cancel_already_cancelled_reservation_returns_error(
         check_out=date(2033, 8, 17),
         guests_count=2,
     )
+    created_reservation_cleanup["reservation_ids"].append(reservation_id)
 
     db_connection.commit()
 

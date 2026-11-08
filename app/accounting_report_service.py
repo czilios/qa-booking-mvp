@@ -61,7 +61,7 @@ def generate_accounting_report(
     reservation_repository = ReservationRepository(connection)
     payment_repository = PaymentRepository(connection)
 
-    transactions = bank_repository.list_by_date_range(
+    transactions = bank_repository.list_report_by_date_range(
         start_date=start_date,
         end_date=end_date,
     )
@@ -72,17 +72,30 @@ def generate_accounting_report(
         if transaction["source_id"] == DIRECT_SOURCE_ID
     ]
     accounting_direct_transactions = []
+    manual_review = []
     entries = []
     
     for transaction in direct_transactions:
-        payment = payment_repository.get_payment_by_bank_transaction_id(
+        payments = payment_repository.get_payments_with_reservation_flags_by_bank_transaction_id(
             transaction["id"]
         )
 
-        payment_has_invoice = (
-            payment is not None
-            and payment["status"] == "PAID"
-            and payment["invoice"]
+        reasons = []
+        if any(payment["invoice"] is None for payment in payments):
+            reasons.append("Brak informacji o fakturze")
+        invoice_flags = {bool(payment["invoice"]) for payment in payments if payment["invoice"] is not None}
+        if len(invoice_flags) > 1:
+            reasons.append("Różne flagi faktury")
+        reservation_flags = {bool(payment["is_test_data"]) for payment in payments}
+        if len(reservation_flags) > 1:
+            reasons.append("Powiązane rezerwacje testowe i rzeczywiste")
+        if reasons:
+            manual_review.append({**transaction, "reason": "; ".join(reasons)})
+            continue
+
+        payment_has_invoice = any(
+            payment["status"] == "PAID" and payment["invoice"]
+            for payment in payments
         )
         matching_invoice = False
         if not payment_has_invoice and transaction["notes"]:
@@ -91,6 +104,7 @@ def generate_accounting_report(
             )
             matching_invoice = any(
                 reservation["source_id"] == DIRECT_SOURCE_ID
+                and not reservation["is_test_data"]
                 and reservation["invoice_number"] == transaction["notes"]
                 and reservation["total_amount"] == transaction["amount"]
                 for reservation in reservations
@@ -155,6 +169,7 @@ def generate_accounting_report(
             
     return {
         "transactions": accounting_direct_transactions,
+        "manual_review": manual_review,
         "booking_reservations": booking_reservations,
         "entries": entries,
         "total_gross": total_gross,

@@ -427,6 +427,7 @@ def test_get_reservation_returns_404_for_nonexistent_reservation(
 def test_get_reservation_ui_returns_200(
     api_client,
     db_connection,
+    created_reservation_cleanup,
 ):
     reservation_repository = ReservationRepository(db_connection)
 
@@ -437,6 +438,7 @@ def test_get_reservation_ui_returns_200(
         check_out=date(2031, 7, 17),
         guests_count=2,
     )
+    created_reservation_cleanup["reservation_ids"].append(reservation_id)
 
     db_connection.commit()
 

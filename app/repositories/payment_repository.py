@@ -202,6 +202,10 @@ class PaymentRepository:
                     ON rs.id = r.source_id
 
                 WHERE p.status = 'PAID'
+                                    AND r.is_test_data = FALSE
+                                    AND (p.bank_transaction_id IS NULL OR EXISTS (
+                                            SELECT 1 FROM bank_transactions b
+                                            WHERE b.id = p.bank_transaction_id AND b.is_test_data = FALSE))
                   AND YEAR(p.paid_at) = %s
                   AND MONTH(p.paid_at) = %s
 
@@ -243,6 +247,10 @@ class PaymentRepository:
                     ON rs.id = r.source_id
 
                 WHERE p.status = 'PAID'
+                                    AND r.is_test_data = FALSE
+                                    AND (p.bank_transaction_id IS NULL OR EXISTS (
+                                            SELECT 1 FROM bank_transactions b
+                                            WHERE b.id = p.bank_transaction_id AND b.is_test_data = FALSE))
                   AND p.paid_at >= %s
                   AND p.paid_at < %s
             """
@@ -276,18 +284,23 @@ class PaymentRepository:
             cursor.execute(
                 f"""
                 SELECT
-                    reservation_id,
+                    p.reservation_id,
                     SUM(
                         CASE
-                            WHEN status IN ('PAID', 'FORFEITED') THEN amount
-                            WHEN status = 'REFUNDED' THEN -amount
+                            WHEN p.status IN ('PAID', 'FORFEITED') THEN p.amount
+                            WHEN p.status = 'REFUNDED' THEN -p.amount
                             ELSE 0
                         END
                     ) AS paid_amount
-                FROM payments
-                WHERE status IN ('PAID', 'FORFEITED', 'REFUNDED')
-                AND reservation_id IN ({placeholders})
-                GROUP BY reservation_id
+                FROM payments p
+                JOIN reservations r ON r.id = p.reservation_id
+                WHERE p.status IN ('PAID', 'FORFEITED', 'REFUNDED')
+                AND r.is_test_data = FALSE
+                                AND (p.bank_transaction_id IS NULL OR EXISTS (
+                                        SELECT 1 FROM bank_transactions b
+                                        WHERE b.id = p.bank_transaction_id AND b.is_test_data = FALSE))
+                AND p.reservation_id IN ({placeholders})
+                GROUP BY p.reservation_id
                 """,
                 reservation_ids,
         )
@@ -296,6 +309,24 @@ class PaymentRepository:
             row["reservation_id"]: row["paid_amount"]
             for row in cursor.fetchall()
         }
+    def get_payments_with_reservation_flags_by_bank_transaction_id(
+        self,
+        bank_transaction_id: int,
+    ):
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT p.id, p.reservation_id, p.status, p.invoice,
+                       r.is_test_data
+                FROM payments p
+                JOIN reservations r ON r.id = p.reservation_id
+                WHERE p.bank_transaction_id = %s
+                ORDER BY p.id
+                """,
+                (bank_transaction_id,),
+            )
+            return cursor.fetchall()
+
     def get_payment_by_bank_transaction_id(
     self,
     bank_transaction_id: int,

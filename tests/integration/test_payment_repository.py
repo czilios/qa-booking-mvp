@@ -172,6 +172,7 @@ def test_get_paid_payments_for_month(
     payment_repository = PaymentRepository(db_connection)
 
     reservation_id = reservation_repository.create(
+        is_test_data=False,
         cottage_id=1,
         source_id=1,
         check_in=date(2026, 8, 20),

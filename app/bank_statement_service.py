@@ -88,7 +88,7 @@ class BankStatementReportService:
             else:
                 start_date = datetime(year, month, 1)
                 end_date = datetime(year, month + 1, 1)
-            transactions = bank_transaction_repository.list_by_date_range(
+            transactions = bank_transaction_repository.list_report_by_date_range(
                 start_date=start_date.date(),
                 end_date=end_date.date(),
                 notes=notes,

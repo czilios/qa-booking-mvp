@@ -16,6 +16,7 @@ class BankTransactionRepository:
         amount: Decimal,
         description: str | None = None,
         notes: str | None = None,
+        is_test_data: bool = False,
     ) -> int:
         if amount <= Decimal("0.00"):
             raise ValueError("Transaction amount must be greater than zero")
@@ -29,9 +30,10 @@ class BankTransactionRepository:
                     cottage_id,
                     amount,
                     description,
-                    notes
+                    notes,
+                    is_test_data
                 )
-                VALUES (%s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     transaction_date,
@@ -40,6 +42,7 @@ class BankTransactionRepository:
                     amount,
                     description,
                     notes,
+                    is_test_data,
                 ),
             )
 
@@ -139,6 +142,36 @@ class BankTransactionRepository:
 
         return cursor.fetchall()
    
+    def list_report_by_date_range(
+        self,
+        start_date: date,
+        end_date: date,
+        notes: str | None = None,
+    ):
+        query = """
+            SELECT b.id, b.transaction_date, b.source_id, b.cottage_id,
+                   b.amount, b.description, b.notes
+            FROM bank_transactions b
+            WHERE b.transaction_date >= %s AND b.transaction_date < %s
+              AND b.is_test_data = FALSE
+              AND (
+                  NOT EXISTS (SELECT 1 FROM payments p
+                              WHERE p.bank_transaction_id = b.id)
+                  OR EXISTS (SELECT 1 FROM payments p
+                             JOIN reservations r ON r.id = p.reservation_id
+                             WHERE p.bank_transaction_id = b.id
+                               AND r.is_test_data = FALSE)
+              )
+        """
+        params = [start_date, end_date]
+        if notes is not None:
+            query += " AND b.notes = %s"
+            params.append(notes)
+        query += " ORDER BY b.transaction_date, b.id"
+        with self.connection.cursor() as cursor:
+            cursor.execute(query, params)
+            return cursor.fetchall()
+
     def sum_by_date_range(
     self,
     start_date: date,

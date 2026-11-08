@@ -112,6 +112,7 @@ class ReservationRepository:
                 check_out,
                 guests_count,
                 status,
+                is_test_data,
                 total_amount,
                 accounting_included,
                 notes,
@@ -267,6 +268,7 @@ class ReservationRepository:
                 FROM reservations
                 WHERE status = 'CONFIRMED'
                 AND accounting_included = TRUE
+                AND is_test_data = FALSE
                 AND check_out >= %s
                 AND check_out < %s
                 ORDER BY check_out, id
@@ -283,10 +285,10 @@ class ReservationRepository:
     self,
     start_date: date,
     end_date: date,
+    exclude_test_data: bool = False,
     ):
         with self.connection.cursor() as cursor:
-            cursor.execute(
-            """
+            query = """
             SELECT
                 id,
                 cottage_id,
@@ -302,13 +304,11 @@ class ReservationRepository:
             WHERE status = 'CONFIRMED'
               AND check_out >= %s
               AND check_out < %s
-            ORDER BY check_out, id
-            """,
-            (
-                start_date,
-                end_date,
-            ),
-        )
+            """
+            if exclude_test_data:
+                query += " AND is_test_data = FALSE"
+            query += " ORDER BY check_out, id"
+            cursor.execute(query, (start_date, end_date))
 
         return cursor.fetchall()
 
@@ -461,6 +461,7 @@ class ReservationRepository:
             WHERE r.status = 'CONFIRMED'
               AND r.source_id = 2
               AND r.accounting_included = TRUE
+                            AND r.is_test_data = FALSE
               AND r.check_in >= %s
               AND r.check_in < %s
             ORDER BY r.check_in, r.id

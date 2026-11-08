@@ -271,6 +271,7 @@ def test_generate_payment_report_returns_payment_with_reservation_data(
         check_in=date(2027, 11, 10),
         check_out=date(2027, 11, 17),
         guests_count=2,
+        is_test_data=False,
     )
 
     payment_id = payment_repository.create_payment(
@@ -318,6 +319,7 @@ def test_generate_payment_report_returns_multiple_payments(
     payment_repository = PaymentRepository(db_connection)
 
     reservation_id = reservation_repository.create(
+        is_test_data=False,
         cottage_id=1,
         source_id=1,
         check_in=date(2027, 11, 10),
@@ -374,6 +376,7 @@ def test_generate_payment_report_calculates_zero_vat(
     payment_repository = PaymentRepository(db_connection)
 
     reservation_id = reservation_repository.create(
+        is_test_data=False,
         cottage_id=1,
         source_id=1,
         check_in=date(2027, 12, 10),
@@ -419,6 +422,7 @@ def test_generate_payment_report_calculates_23_percent_vat(
     payment_repository = PaymentRepository(db_connection)
 
     reservation_id = reservation_repository.create(
+        is_test_data=False,
         cottage_id=1,
         source_id=1,
         check_in=date(2028, 1, 10),
@@ -463,6 +467,7 @@ def test_generate_payment_report_calculates_23_percent_vat(
     payment_repository = PaymentRepository(db_connection)
 
     reservation_id = reservation_repository.create(
+        is_test_data=False,
         cottage_id=1,
         source_id=1,
         check_in=date(2028, 1, 10),
@@ -507,6 +512,7 @@ def test_generate_payment_report_filters_by_source(
     payment_repository = PaymentRepository(db_connection)
 
     belvilla_reservation_id = reservation_repository.create(
+        is_test_data=False,
         cottage_id=1,
         source_id=4,
         check_in=date(2028, 2, 10),
@@ -515,6 +521,7 @@ def test_generate_payment_report_filters_by_source(
     )
 
     booking_reservation_id = reservation_repository.create(
+        is_test_data=False,
         cottage_id=2,
         source_id=1,
         check_in=date(2028, 2, 10),

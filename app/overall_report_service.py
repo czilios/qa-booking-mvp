@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from pymysql.connections import Connection
 
-from app.bank_transaction_service import list_bank_transactions
+from app.repositories.bank_transaction_repository import BankTransactionRepository
 from app.repositories.reservation_repository import ReservationRepository
 
 
@@ -27,6 +27,7 @@ def generate_overall_report(
     reservations = repository.get_all_confirmed_reservations_between(
         start_date=start_date,
         end_date=end_date,
+        exclude_test_data=True,
     )
 
     rows = []
@@ -64,8 +65,7 @@ def generate_cash_flow_report(
         start_date=start_date,
         end_date=end_date,
     )
-    transactions = list_bank_transactions(
-        connection=connection,
+    transactions = BankTransactionRepository(connection).list_report_by_date_range(
         start_date=start_date,
         end_date=end_date,
     )

@@ -282,6 +282,7 @@ def test_get_payment_report_returns_200(
     payment_repository = PaymentRepository(db_connection)
 
     reservation_id = reservation_repository.create(
+        is_test_data=False,
         cottage_id=1,
         source_id=4,  # BELVILLA
         check_in=date(2028, 3, 10),

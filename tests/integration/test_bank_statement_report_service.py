@@ -12,6 +12,7 @@ def test_generate_monthly_bank_statement_report(db_connection):
     payment_repository = PaymentRepository(db_connection)
 
     reservation_id = reservation_repository.create(
+        is_test_data=False,
         cottage_id=1,
         source_id=1,
         check_in=date(2026, 11, 1),
@@ -55,6 +56,7 @@ def test_generate_monthly_report_uses_paid_at_month(
     payment_repository = PaymentRepository(db_connection)
 
     october_reservation_id = reservation_repository.create(
+        is_test_data=False,
         cottage_id=1,
         source_id=1,
         check_in=date(2026, 11, 10),
@@ -64,6 +66,7 @@ def test_generate_monthly_report_uses_paid_at_month(
     )
 
     november_reservation_id = reservation_repository.create(
+        is_test_data=False,
         cottage_id=2,
         source_id=1,
         check_in=date(2026, 12, 10),
@@ -131,6 +134,7 @@ def test_generate_monthly_report_with_multiple_payments(
     payment_repository = PaymentRepository(db_connection)
 
     reservation_id_1 = reservation_repository.create(
+        is_test_data=False,
         cottage_id=1,
         source_id=1,
         check_in=date(2026, 11, 1),
@@ -140,6 +144,7 @@ def test_generate_monthly_report_with_multiple_payments(
     )
 
     reservation_id_2 = reservation_repository.create(
+        is_test_data=False,
         cottage_id=2,
         source_id=1,
         check_in=date(2026, 11, 10),
@@ -189,6 +194,7 @@ def test_generate_payment_report_for_date_range(db_connection):
     payment_repository = PaymentRepository(db_connection)
 
     reservation_id_1 = reservation_repository.create(
+        is_test_data=False,
         cottage_id=1,
         source_id=1,
         check_in=date(2026, 11, 1),
@@ -198,6 +204,7 @@ def test_generate_payment_report_for_date_range(db_connection):
     )
 
     reservation_id_2 = reservation_repository.create(
+        is_test_data=False,
         cottage_id=2,
         source_id=1,
         check_in=date(2026, 11, 10),
@@ -251,6 +258,7 @@ def test_generate_payment_report_for_split_payments(db_connection):
     payment_repository = PaymentRepository(db_connection)
 
     reservation_id = reservation_repository.create(
+        is_test_data=False,
         cottage_id=1,
         source_id=1,
         check_in=date(2028, 11, 1),

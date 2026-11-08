@@ -232,26 +232,28 @@ def test_sales_report_ui_shows_reservation_details_and_optional_phone(
     assert response.status_code == 200
     assert 'name="month"' in response.text
     assert 'name="year"' in response.text
-    assert str(reservation_ids["direct_with_phone"]) in response.text
-    assert str(reservation_ids["booking_without_phone"]) in response.text
-    assert str(reservation_ids["belvilla_without_phone"]) in response.text
-    assert str(reservation_ids["created_outside_selected_month"]) not in response.text
-    assert "+48500100203" in response.text
-    assert "Direct" in response.text
-    assert "Booking" in response.text
-    assert "Belvilla" in response.text
-    assert "CONFIRMED" in response.text
-    assert "2033-10-02" in response.text
-    assert "2033-11-10" in response.text
-    assert "2033-11-13" in response.text
-    assert "3 210,00 zł" in response.text
-    assert "4 250,00 zł" in response.text
+    rows = {}
+    for name in ("direct_with_phone", "booking_without_phone", "belvilla_without_phone"):
+        row_start = f'<tr data-reservation-id="{reservation_ids[name]}">'
+        assert row_start in response.text
+        rows[name] = response.text.split(row_start, 1)[1].split("</tr>", 1)[0]
+    excluded_row = f'<tr data-reservation-id="{reservation_ids["created_outside_selected_month"]}">'
+    assert excluded_row not in response.text
 
-    booking_row = response.text.split(
-        f'<tr data-reservation-id="{reservation_ids["booking_without_phone"]}">',
-        1,
-    )[1].split("</tr>", 1)[0]
+    direct_row = rows["direct_with_phone"]
+    assert "+48500100203" in direct_row
+    assert "Direct" in direct_row
+    assert "CONFIRMED" in direct_row
+    assert "2033-10-02" in direct_row
+    assert "2033-11-10" in direct_row
+    assert "2033-11-13" in direct_row
+    assert "3 210,00 zł" in direct_row
+
+    booking_row = rows["booking_without_phone"]
+    assert "Booking" in booking_row
+    assert "4 250,00 zł" in booking_row
     assert "—" in booking_row
+    assert "Belvilla" in rows["belvilla_without_phone"]
 
 
 def test_sales_report_ui_displays_full_year_by_reservation_creation_date(
