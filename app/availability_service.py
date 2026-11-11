@@ -17,6 +17,8 @@ class AvailabilityService:
     check_in,
     check_out,
     exclude_reservation_id=None,
+    lock_reservations=False,
+    reservation_cottage_id=None,
     guests_count=None,
     ):
         cottage_ids = (
@@ -24,9 +26,15 @@ class AvailabilityService:
             .get_active_cottage_ids(guests_count=guests_count)
         )
 
+        reservation_reader = (
+            self.reservation_repository.get_active_reservations_for_update
+            if lock_reservations
+            else self.reservation_repository.get_active_reservations
+        )
         reservations = (
-            self.reservation_repository
-            .get_active_reservations()
+            reservation_reader(reservation_cottage_id)
+            if lock_reservations
+            else reservation_reader()
         )
 
         blocks = (

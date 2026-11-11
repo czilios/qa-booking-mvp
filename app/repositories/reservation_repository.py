@@ -212,6 +212,26 @@ class ReservationRepository:
 
             return cursor.fetchall()
 
+    def get_active_reservations_for_update(self, cottage_id: int):
+        """Read the latest committed active reservations inside a write flow."""
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id, cottage_id, customer_id, check_in, check_out, status
+                FROM reservations
+                WHERE cottage_id = %s
+                  AND status IN ('PENDING', 'CONFIRMED')
+                  AND (
+                    status = 'CONFIRMED'
+                    OR expires_at IS NULL
+                    OR expires_at > CURRENT_TIMESTAMP
+                  )
+                FOR UPDATE
+                """,
+                (cottage_id,),
+            )
+            return cursor.fetchall()
+
     def update(
         self,
         reservation_id: int,

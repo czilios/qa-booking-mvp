@@ -1546,6 +1546,8 @@ def accept_web_inquiry_ui(
             check_in=inquiry["offered_check_in"],
             check_out=inquiry["offered_check_out"],
             guests_count=inquiry["guests_count"],
+            lock_reservations=True,
+            reservation_cottage_id=cottage_id,
         )
         if cottage_id not in available_cottage_ids:
             raise HTTPException(status_code=409, detail="Cottage is no longer available")

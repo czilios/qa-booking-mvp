@@ -69,7 +69,9 @@ def create_reservation(
     )
 
     cottage_repository = CottageRepository(connection)
-    cottage = cottage_repository.get_by_id(cottage_id)
+    # Lock a stable parent row before reading availability. All booking paths
+    # for this cottage serialize on this row until the caller commits.
+    cottage = cottage_repository.get_by_id_for_update(cottage_id)
 
     if cottage is None:
         raise ValueError("Cottage not found")
@@ -80,6 +82,8 @@ def create_reservation(
     available_cottages = availability_service.get_available_cottages(
         check_in=check_in,
         check_out=check_out,
+        lock_reservations=True,
+        reservation_cottage_id=cottage_id,
     )
 
     if cottage_id not in available_cottages:
@@ -109,6 +113,14 @@ def update_reservation(
     reservation_repository = ReservationRepository(connection)
     cottage_repository = CottageRepository(connection)
 
+    reservation = reservation_repository.get_by_id_for_update(reservation_id)
+    if reservation is None:
+        raise ValueError("Reservation not found")
+
+    # Always acquire cottage locks in ID order when a reservation moves.
+    for locked_cottage_id in sorted({reservation["cottage_id"], cottage_id}):
+        cottage_repository.get_by_id_for_update(locked_cottage_id)
+
     cottage = cottage_repository.get_by_id(cottage_id)
 
     if cottage is None:
@@ -127,6 +139,8 @@ def update_reservation(
         check_in=check_in,
         check_out=check_out,
         exclude_reservation_id=reservation_id,
+        lock_reservations=True,
+        reservation_cottage_id=cottage_id,
     )
 
     if cottage_id not in available_cottages:
