@@ -17,7 +17,7 @@ import calendar
 from app.reservation_service import create_reservation, generate_bank_statement_report, update_reservation
 
 from app.payment_service import create_payment, mark_payment_as_paid, generate_payment_report
-from app.reservation_service import cancel_reservation, generate_overall_report, create_historical_reservation
+from app.reservation_service import cancel_reservation, generate_overall_report
 from app.customer_service import create_customer, get_customer, normalize_phone, update_customer, validate_customer_details
 from app.availability_service import AvailabilityService
 from app.bank_statement_service import BankStatementReportService
@@ -43,6 +43,11 @@ from app.repositories.web_inquiry_repository import WebInquiryRepository
 from app.rate_limiter import SlidingWindowRateLimiter
 
 from app.database import get_connection
+from app.transaction_retry import (
+    TransactionOutcomeUnknown,
+    TransactionRetryExhausted,
+    run_transaction_with_retry,
+)
 
 
 
@@ -64,6 +69,24 @@ app.add_middleware(
 )
 
 rate_limiter = SlidingWindowRateLimiter()
+
+
+def _raise_transaction_http_error(error: BaseException) -> None:
+    if isinstance(error, TransactionOutcomeUnknown):
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "The operation outcome could not be confirmed. "
+                "Check its current status before submitting it again."
+            ),
+        ) from error
+    if isinstance(error, TransactionRetryExhausted):
+        raise HTTPException(
+            status_code=503,
+            detail="Temporary database contention prevented completion. Try again later.",
+            headers={"Retry-After": "1"},
+        ) from error
+    raise error
 
 app.mount(
     "/static",
@@ -470,18 +493,20 @@ def overall_report_ui(
 @app.post("/api/reservations", status_code=201)
 def create_reservation_endpoint(
     reservation: ReservationCreate,
-    db_connection=Depends(get_api_write_connection, scope="function"),
 ):
     try:
-        return create_reservation(
-            connection=db_connection,
-            customer_id=reservation.customer_id,
-            cottage_id=reservation.cottage_id,
-            source_id=reservation.source_id,
-            check_in=reservation.check_in,
-            check_out=reservation.check_out,
-            guests_count=reservation.guests_count,
-            total_amount=reservation.total_amount,
+        return run_transaction_with_retry(
+            lambda connection: create_reservation(
+                connection=connection,
+                customer_id=reservation.customer_id,
+                cottage_id=reservation.cottage_id,
+                source_id=reservation.source_id,
+                check_in=reservation.check_in,
+                check_out=reservation.check_out,
+                guests_count=reservation.guests_count,
+                total_amount=reservation.total_amount,
+            ),
+            operation_name="api_create_reservation",
         )
     except ValueError as exc:
         if str(exc) == "Reservation not found":
@@ -494,12 +519,13 @@ def create_reservation_endpoint(
             status_code=409,
             detail=str(exc),
         )
+    except (TransactionOutcomeUnknown, TransactionRetryExhausted) as exc:
+        _raise_transaction_http_error(exc)
 
 @app.put("/api/reservations/{reservation_id}")
 def update_reservation_endpoint(
     reservation_id: int,
     reservation: ReservationUpdate,
-    db_connection=Depends(get_api_write_connection, scope="function"),
 ):
     if reservation.check_out <= reservation.check_in:
         raise HTTPException(
@@ -508,14 +534,17 @@ def update_reservation_endpoint(
         )
 
     try:
-        update_reservation(
-            connection=db_connection,
-            reservation_id=reservation_id,
-            cottage_id=reservation.cottage_id,
-            source_id=reservation.source_id,
-            check_in=reservation.check_in,
-            check_out=reservation.check_out,
-            guests_count=reservation.guests_count,
+        run_transaction_with_retry(
+            lambda connection: update_reservation(
+                connection=connection,
+                reservation_id=reservation_id,
+                cottage_id=reservation.cottage_id,
+                source_id=reservation.source_id,
+                check_in=reservation.check_in,
+                check_out=reservation.check_out,
+                guests_count=reservation.guests_count,
+            ),
+            operation_name="api_update_reservation",
         )
     except ValueError as exc:
         if str(exc) == "Reservation not found":
@@ -528,6 +557,8 @@ def update_reservation_endpoint(
             status_code=409,
             detail=str(exc),
         )
+    except (TransactionOutcomeUnknown, TransactionRetryExhausted) as exc:
+        _raise_transaction_http_error(exc)
 
     return {"message": "Reservation updated"}
 
@@ -797,36 +828,41 @@ def create_ui_reservation(
     guests_count: int = Form(...),
     phone: str | None = Form(None),
     email: str | None = Form(None),
-    db_connection=Depends(get_db_connection),
 ):
     try:
         first_name, last_name, phone, email = validate_customer_details(
             first_name, last_name, phone, email
         )
-        customer_repository = CustomerRepository(db_connection)
-        customer = customer_repository.get_by_phone(phone) if phone else None
 
-        if customer is None:
-            customer_id = create_customer(
-                connection=db_connection,
-                first_name=first_name,
-                last_name=last_name,
-                phone=phone,
-                email=email,
+        def create_customer_and_reservation(connection):
+            customer_repository = CustomerRepository(connection)
+            customer = customer_repository.get_by_phone(phone) if phone else None
+
+            if customer is None:
+                customer_id = create_customer(
+                    connection=connection,
+                    first_name=first_name,
+                    last_name=last_name,
+                    phone=phone,
+                    email=email,
+                )
+            else:
+                customer_id = customer["id"]
+
+            return create_reservation(
+                connection=connection,
+                customer_id=customer_id,
+                cottage_id=cottage_id,
+                source_id=1,  # direct booking
+                check_in=check_in,
+                check_out=check_out,
+                guests_count=guests_count,
             )
-        else:
-            customer_id = customer["id"]
 
-        reservation_id = create_reservation(
-            connection=db_connection,
-            customer_id=customer_id,
-            cottage_id=cottage_id,
-            source_id=1, #direct booking
-            check_in=check_in,
-            check_out=check_out,
-            guests_count=guests_count,
+        reservation_id = run_transaction_with_retry(
+            create_customer_and_reservation,
+            operation_name="ui_create_reservation",
         )
-        db_connection.commit()
 
     except ValueError as exc:
         
@@ -834,6 +870,8 @@ def create_ui_reservation(
             status_code=409,
             detail=str(exc),
         )
+    except (TransactionOutcomeUnknown, TransactionRetryExhausted) as exc:
+        _raise_transaction_http_error(exc)
 
     return RedirectResponse(
     url=(
@@ -855,16 +893,8 @@ def search_reservation_ui(
     )
 
 @app.get("/ui/reservations/historical")
-def historical_reservation_ui(
-    request: Request,
-):
-    return templates.TemplateResponse(
-        request=request,
-        name="historical_reservation.html",
-        context={
-            "request": request,
-        },
-    )
+def historical_reservation_ui():
+    raise HTTPException(status_code=404, detail="Historical reservations are disabled")
 
 @app.get("/ui/reservations/{reservation_id}")
 def reservation_ui(
@@ -1013,72 +1043,8 @@ def overall_report_ui(
 
 
 @app.post("/ui/reservations/historical")
-def create_historical_ui_reservation(
-    cottage_id: int = Form(...),
-    source_id: int = Form(...),
-    check_in: date = Form(...),
-    check_out: date = Form(...),
-    guests_count: int = Form(...),
-    total_amount: Decimal = Form(...),
-    phone: str | None = Form(None),
-    first_name: str | None = Form(None),
-    last_name: str | None = Form(None),
-    notes: str | None = Form(None),
-    commission_amount: Decimal | None = Form(None),
-    db_connection=Depends(get_db_connection),
-):
-    try:
-        customer_id = None
-        normalized_phone = normalize_phone(phone.strip()) if phone and phone.strip() else None
-        if normalized_phone:
-            customer_repository = CustomerRepository(db_connection)
-            customer = customer_repository.get_by_phone(normalized_phone)
-
-            if customer is None:
-                try:
-                    customer_id = create_customer(
-                        connection=db_connection,
-                        first_name=first_name,
-                        last_name=last_name,
-                        phone=normalized_phone,
-                    )
-                except ValueError as exc:
-                    raise HTTPException(status_code=400, detail=str(exc)) from exc
-            else:
-                customer_id = customer["id"]
-
-        reservation_id = create_historical_reservation(
-            connection=db_connection,
-            customer_id=customer_id,
-            cottage_id=cottage_id,
-            source_id=source_id,
-            check_in=check_in,
-            check_out=check_out,
-            guests_count=guests_count,
-            total_amount=total_amount,
-            notes=notes,
-            commission_amount=commission_amount,
-        )
-
-        db_connection.commit()
-
-    except HTTPException:
-        db_connection.rollback()
-        raise
-    except ValueError as exc:
-        db_connection.rollback()
-        raise HTTPException(
-            status_code=409,
-            detail=str(exc),
-        )
-    except Exception:
-        db_connection.rollback()
-        raise
-
-    return RedirectResponse(
-        url=f"/ui/reservations/{reservation_id}",
-        status_code=303,
-    )
+def create_historical_ui_reservation():
+    raise HTTPException(status_code=404, detail="Historical reservations are disabled")
 
 @app.get("/ui/bank-transactions")
 def bank_transactions_ui(
@@ -1448,7 +1414,6 @@ def mark_inquiry_offer_sent_ui(
     inquiry_repository = WebInquiryRepository(db_connection)
     reservation_repository = ReservationRepository(db_connection)
     cottage_repository = CottageRepository(db_connection)
-    now = datetime.now().replace(microsecond=0)
     try:
         inquiry = inquiry_repository.get_by_id_for_update(inquiry_id)
         if inquiry is None:
@@ -1468,7 +1433,6 @@ def mark_inquiry_offer_sent_ui(
         if inquiry["guests_count"] > cottage["capacity"]:
             raise HTTPException(status_code=409, detail="Cottage capacity is too small")
 
-        reservation_repository.expire_pending_reservations(now)
         availability_service = AvailabilityService(
             reservation_repository=reservation_repository,
             block_repository=BlockRepository(db_connection),
@@ -1509,14 +1473,13 @@ def mark_inquiry_offer_sent_ui(
 @app.post("/ui/inquiries/{inquiry_id}/accept")
 def accept_web_inquiry_ui(
     inquiry_id: int,
-    db_connection=Depends(get_db_connection),
 ):
-    inquiry_repository = WebInquiryRepository(db_connection)
-    reservation_repository = ReservationRepository(db_connection)
-    cottage_repository = CottageRepository(db_connection)
-    now = datetime.now().replace(microsecond=0)
+    def accept_inquiry(connection):
+        inquiry_repository = WebInquiryRepository(connection)
+        reservation_repository = ReservationRepository(connection)
+        cottage_repository = CottageRepository(connection)
+        now = datetime.now().replace(microsecond=0)
 
-    try:
         inquiry = inquiry_repository.get_by_id_for_update(inquiry_id)
         if inquiry is None:
             raise HTTPException(status_code=404, detail="Inquiry not found")
@@ -1536,10 +1499,9 @@ def accept_web_inquiry_ui(
         if inquiry["guests_count"] > cottage["capacity"]:
             raise HTTPException(status_code=409, detail="Cottage capacity is too small")
 
-        reservation_repository.expire_pending_reservations(now)
         availability_service = AvailabilityService(
             reservation_repository=reservation_repository,
-            block_repository=BlockRepository(db_connection),
+            block_repository=BlockRepository(connection),
             cottage_repository=cottage_repository,
         )
         available_cottage_ids = availability_service.get_available_cottages(
@@ -1553,13 +1515,13 @@ def accept_web_inquiry_ui(
             raise HTTPException(status_code=409, detail="Cottage is no longer available")
 
         first_name, _, last_name = inquiry["full_name"].strip().partition(" ")
-        customer_id = CustomerRepository(db_connection).create(
+        customer_id = CustomerRepository(connection).create(
             first_name=first_name,
             last_name=last_name,
             phone=inquiry["phone"],
             email=inquiry["email"],
         )
-        with db_connection.cursor() as cursor:
+        with connection.cursor() as cursor:
             cursor.execute(
                 "SELECT id FROM reservation_sources WHERE code = 'DIRECT'"
             )
@@ -1580,7 +1542,7 @@ def accept_web_inquiry_ui(
             deposit_amount=inquiry["offered_deposit_amount"],
             notes=f"Rezerwacja z zapytania WWW #{inquiry_id}",
         )
-        PaymentRepository(db_connection).create_payment(
+        PaymentRepository(connection).create_payment(
             reservation_id=reservation_id,
             payment_type="DEPOSIT",
             amount=inquiry["offered_deposit_amount"],
@@ -1588,12 +1550,18 @@ def accept_web_inquiry_ui(
             due_at=expires_at,
         )
         inquiry_repository.convert_to_reservation(inquiry_id, reservation_id)
-        db_connection.commit()
+        return reservation_id
+
+    try:
+        reservation_id = run_transaction_with_retry(
+            accept_inquiry,
+            operation_name="ui_accept_web_inquiry",
+        )
     except HTTPException:
-        db_connection.rollback()
         raise
+    except (TransactionOutcomeUnknown, TransactionRetryExhausted) as exc:
+        _raise_transaction_http_error(exc)
     except Exception:
-        db_connection.rollback()
         raise
 
     return RedirectResponse(

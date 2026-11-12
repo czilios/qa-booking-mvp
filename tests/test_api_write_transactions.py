@@ -6,6 +6,7 @@ from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
 from app import main
+from app.transaction_retry import TransactionOutcomeUnknown, TransactionRetryExhausted
 
 
 class FakeConnection:
@@ -97,12 +98,19 @@ def test_crud_write_routes_use_transaction_dependency(path, method):
         and method in route.methods
     )
 
-    write_dependency = next(
+    write_dependencies = [
         dependency
         for dependency in route.dependant.dependencies
         if dependency.call is main.get_api_write_connection
-    )
-    assert write_dependency.scope == "function"
+    ]
+    if (path, method) in {
+        ("/api/reservations", "POST"),
+        ("/api/reservations/{reservation_id}", "PUT"),
+    }:
+        assert write_dependencies == []
+    else:
+        assert len(write_dependencies) == 1
+        assert write_dependencies[0].scope == "function"
 
 
 def test_api_write_dependency_opens_connection_only_after_being_requested(
@@ -123,6 +131,13 @@ def test_api_write_dependency_opens_connection_only_after_being_requested(
 def test_write_dependency_commits_before_http_response_starts(monkeypatch):
     connection = FakeConnection()
     monkeypatch.setattr(main, "get_connection", lambda: connection)
+
+    def run_operation(operation, operation_name):
+        result = operation(connection)
+        connection.commit()
+        return result
+
+    monkeypatch.setattr(main, "run_transaction_with_retry", run_operation)
 
     def create_reservation(**kwargs):
         connection.events.append("operation")
@@ -156,12 +171,21 @@ def test_write_dependency_commits_before_http_response_starts(monkeypatch):
     )
 
     assert response.status_code == 201
-    assert probe.events_at_response_start == ["operation", "commit", "close"]
+    assert probe.events_at_response_start == ["operation", "commit"]
 
 
 def test_http_exception_after_write_rolls_back_without_commit(monkeypatch):
     connection = FakeConnection()
     monkeypatch.setattr(main, "get_connection", lambda: connection)
+
+    def run_operation(operation, operation_name):
+        try:
+            return operation(connection)
+        except BaseException:
+            connection.rollback()
+            raise
+
+    monkeypatch.setattr(main, "run_transaction_with_retry", run_operation)
 
     def fail_after_write(**kwargs):
         connection.events.append("operation")
@@ -182,4 +206,90 @@ def test_http_exception_after_write_rolls_back_without_commit(monkeypatch):
 
     assert response.status_code == 409
     assert response.json()["detail"] == "operation rejected"
-    assert connection.events == ["operation", "rollback", "close"]
+    assert connection.events == ["operation", "rollback"]
+
+
+@pytest.mark.parametrize(
+    "method, path, request_data",
+    [
+        (
+            "post",
+            "/api/reservations",
+            {
+                "json": {
+                    "cottage_id": 1,
+                    "source_id": 1,
+                    "check_in": "2027-07-20",
+                    "check_out": "2027-07-27",
+                    "guests_count": 2,
+                }
+            },
+        ),
+        (
+            "put",
+            "/api/reservations/123",
+            {
+                "json": {
+                    "cottage_id": 1,
+                    "source_id": 1,
+                    "check_in": "2027-07-20",
+                    "check_out": "2027-07-27",
+                    "guests_count": 2,
+                }
+            },
+        ),
+        (
+            "post",
+            "/ui/reservations",
+            {
+                "data": {
+                    "cottage_id": 1,
+                    "check_in": "2027-07-20",
+                    "check_out": "2027-07-27",
+                    "first_name": "Test",
+                    "last_name": "Retry",
+                    "phone": "+48123456789",
+                    "guests_count": 2,
+                }
+            },
+        ),
+        ("post", "/ui/inquiries/123/accept", {}),
+    ],
+)
+@pytest.mark.parametrize("error_kind", ["exhausted", "unknown_outcome"])
+def test_all_retry_endpoints_map_database_errors_to_safe_503(
+    monkeypatch, method, path, request_data, error_kind
+):
+    if error_kind == "exhausted":
+        runner_error = TransactionRetryExhausted(
+            error_code=1213,
+            operation_name="test_reservation_operation",
+            attempts=3,
+            correlation_id="test-correlation",
+        )
+        expected_detail = "Temporary database contention prevented completion. Try again later."
+    else:
+        runner_error = TransactionOutcomeUnknown(
+            error_code=2013,
+            operation_name="test_reservation_operation",
+            stage="commit",
+            correlation_id="test-correlation",
+        )
+        expected_detail = (
+            "The operation outcome could not be confirmed. "
+            "Check its current status before submitting it again."
+        )
+
+    monkeypatch.setattr(
+        main,
+        "run_transaction_with_retry",
+        Mock(side_effect=runner_error),
+    )
+
+    response = getattr(TestClient(main.app), method)(path, **request_data)
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == expected_detail
+    assert "1213" not in response.text
+    assert "2013" not in response.text
+    assert "SQL" not in response.text

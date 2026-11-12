@@ -113,15 +113,29 @@ def update_reservation(
     reservation_repository = ReservationRepository(connection)
     cottage_repository = CottageRepository(connection)
 
+    initial_reservation = reservation_repository.get_by_id(reservation_id)
+    if initial_reservation is None:
+        raise ValueError("Reservation not found")
+
+    # Lock both cottages before the reservation, using a stable order so
+    # concurrent moves in opposite directions cannot invert cottage locks.
+    locked_cottages = {}
+    for locked_cottage_id in sorted(
+        {initial_reservation["cottage_id"], cottage_id}
+    ):
+        locked_cottages[locked_cottage_id] = (
+            cottage_repository.get_by_id_for_update(locked_cottage_id)
+        )
+
     reservation = reservation_repository.get_by_id_for_update(reservation_id)
     if reservation is None:
         raise ValueError("Reservation not found")
+    if reservation["cottage_id"] != initial_reservation["cottage_id"]:
+        raise ValueError(
+            "Reservation changed while waiting for cottage locks; retry the operation"
+        )
 
-    # Always acquire cottage locks in ID order when a reservation moves.
-    for locked_cottage_id in sorted({reservation["cottage_id"], cottage_id}):
-        cottage_repository.get_by_id_for_update(locked_cottage_id)
-
-    cottage = cottage_repository.get_by_id(cottage_id)
+    cottage = locked_cottages[cottage_id]
 
     if cottage is None:
         raise ValueError("Cottage not found")
