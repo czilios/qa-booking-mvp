@@ -1,6 +1,8 @@
+from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from calendar import monthrange
+import logging
 import os
 import re
 
@@ -41,6 +43,19 @@ from app.repositories.payment_repository import PaymentRepository
 from app.repositories.customer_repository import CustomerRepository
 from app.repositories.web_inquiry_repository import WebInquiryRepository
 from app.rate_limiter import SlidingWindowRateLimiter
+from app.auth import (
+    AuthConfigurationError,
+    SESSION_ABSOLUTE_TIMEOUT,
+    SESSION_COOKIE_NAME,
+    authenticate_operator_session,
+    create_operator_session,
+    load_operator_password_hash,
+    revoke_operator_session,
+    safe_login_redirect,
+    session_cookie_secure,
+    verify_operator_credentials,
+)
+from app.repositories.operator_session_repository import OperatorSessionRepository
 
 from app.database import get_connection
 from app.transaction_retry import (
@@ -51,7 +66,21 @@ from app.transaction_retry import (
 
 
 
-app = FastAPI()
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(application):
+    try:
+        application.state.operator_password_hash = load_operator_password_hash()
+        application.state.session_cookie_secure = session_cookie_secure()
+    except AuthConfigurationError:
+        logger.critical("Operator authentication configuration is invalid")
+        raise
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 cors_origins = [
     origin.strip()
@@ -307,6 +336,200 @@ MONTH_NAMES_PL_GENITIVE = {
 @app.get("/")
 def read_root():
     return {"message": "QA Booking API"}
+
+
+def _auth_configuration(request: Request) -> tuple[str, bool]:
+    try:
+        password_hash = getattr(
+            request.app.state,
+            "operator_password_hash",
+            None,
+        ) or load_operator_password_hash()
+        cookie_secure = _session_cookie_secure(request)
+        return password_hash, cookie_secure
+    except AuthConfigurationError as exc:
+        logger.error("Operator authentication configuration is invalid")
+        raise HTTPException(
+            status_code=503,
+            detail="Logowanie jest chwilowo niedostępne.",
+        ) from exc
+
+
+def _session_cookie_secure(request: Request) -> bool:
+    configured_value = getattr(request.app.state, "session_cookie_secure", None)
+    if isinstance(configured_value, bool):
+        return configured_value
+    return session_cookie_secure()
+
+
+def _database_error_code(error: Exception) -> int | None:
+    args = getattr(error, "args", ())
+    if args and isinstance(args[0], int):
+        return args[0]
+    return None
+
+
+def _rollback_auth_transaction(
+    connection,
+    *,
+    operation: str,
+    original_error: Exception,
+) -> None:
+    if connection is not None:
+        try:
+            connection.rollback()
+        except Exception as rollback_error:
+            logger.error(
+                "Operator auth rollback failed (operation=%s, error_type=%s, error_code=%s)",
+                operation,
+                type(rollback_error).__name__,
+                _database_error_code(rollback_error),
+            )
+    logger.error(
+        "Operator auth operation failed (operation=%s, error_type=%s, error_code=%s)",
+        operation,
+        type(original_error).__name__,
+        _database_error_code(original_error),
+    )
+
+
+def _close_auth_connection(connection, *, operation: str) -> None:
+    if connection is None:
+        return
+    try:
+        connection.close()
+    except Exception as close_error:
+        logger.error(
+            "Operator auth connection close failed (operation=%s, error_type=%s, error_code=%s)",
+            operation,
+            type(close_error).__name__,
+            _database_error_code(close_error),
+        )
+
+
+@app.get("/login")
+def operator_login_page(request: Request):
+    _auth_configuration(request)
+    response = templates.TemplateResponse(
+        request=request,
+        name="operator_login.html",
+        context={"error": None, "next": safe_login_redirect(request.query_params.get("next"))},
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@app.post("/login")
+def operator_login(
+    request: Request,
+    login: str = Form(...),
+    password: str = Form(...),
+    next: str | None = Form(None),
+):
+    password_hash, cookie_secure = _auth_configuration(request)
+    enforce_rate_limit(
+        request=request,
+        action="operator_login",
+        limit=5,
+        window_seconds=900,
+    )
+
+    if not verify_operator_credentials(login, password, password_hash):
+        response = templates.TemplateResponse(
+            request=request,
+            name="operator_login.html",
+            context={
+                "error": "Nieprawidłowy login lub hasło.",
+                "next": safe_login_redirect(next),
+            },
+            status_code=401,
+        )
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    connection = None
+    try:
+        connection = get_connection()
+        session = create_operator_session()
+        OperatorSessionRepository(connection).create(
+            token_hash=session.token_hash,
+            operator_id=session.operator_id,
+            created_at=session.created_at,
+            last_activity_at=session.last_activity_at,
+            absolute_expires_at=session.absolute_expires_at,
+        )
+        connection.commit()
+    except Exception as exc:
+        _rollback_auth_transaction(
+            connection,
+            operation="login_session_create",
+            original_error=exc,
+        )
+        raise HTTPException(
+            status_code=503,
+            detail="Nie można teraz rozpocząć sesji.",
+        ) from exc
+    finally:
+        _close_auth_connection(connection, operation="login_session_create")
+
+    response = RedirectResponse(
+        url=safe_login_redirect(next),
+        status_code=303,
+    )
+    response.set_cookie(
+        key=SESSION_COOKIE_NAME,
+        value=session.token,
+        max_age=int(SESSION_ABSOLUTE_TIMEOUT.total_seconds()),
+        path="/",
+        secure=cookie_secure,
+        httponly=True,
+        samesite="lax",
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@app.post("/logout")
+def operator_logout(request: Request):
+    token = request.cookies.get(SESSION_COOKIE_NAME)
+    token_connection = None
+    cookie_secure = _session_cookie_secure(request)
+    if token:
+        try:
+            token_connection = get_connection()
+            session = authenticate_operator_session(
+                token_connection,
+                token,
+            )
+            if session is not None:
+                revoke_operator_session(token_connection, token)
+            token_connection.commit()
+        except Exception as exc:
+            _rollback_auth_transaction(
+                token_connection,
+                operation="logout_session_revoke",
+                original_error=exc,
+            )
+            raise HTTPException(
+                status_code=503,
+                detail="Nie można teraz zakończyć sesji.",
+            ) from exc
+        finally:
+            _close_auth_connection(
+                token_connection,
+                operation="logout_session_revoke",
+            )
+
+    response = RedirectResponse(url="/login", status_code=303)
+    response.delete_cookie(
+        key=SESSION_COOKIE_NAME,
+        path="/",
+        secure=cookie_secure,
+        httponly=True,
+        samesite="lax",
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.get("/api/availability")

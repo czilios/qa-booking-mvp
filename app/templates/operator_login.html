@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="same-origin">
+    <title>Logowanie operatora — QA Booking</title>
+    <style>
+        body { font-family: system-ui, sans-serif; margin: 0; background: #f3f4f6; color: #17202a; }
+        main { max-width: 24rem; margin: 12vh auto; padding: 2rem; background: #fff; border-radius: .75rem; box-shadow: 0 8px 32px #0001; }
+        label { display: block; margin: 1rem 0 .35rem; }
+        input { box-sizing: border-box; width: 100%; padding: .7rem; }
+        button { margin-top: 1.25rem; padding: .75rem 1rem; width: 100%; cursor: pointer; }
+        .error { color: #9b1c1c; }
+    </style>
+</head>
+<body>
+<main>
+    <h1>Logowanie operatora</h1>
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+    <form method="post" action="/login" autocomplete="on">
+        <input type="hidden" name="next" value="{{ next }}">
+        <label for="login">Login</label>
+        <input id="login" name="login" type="text" autocomplete="username" required>
+        <label for="password">Hasło</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+        <button type="submit">Zaloguj</button>
+    </form>
+</main>
+</body>
+</html>
