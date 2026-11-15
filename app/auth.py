@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import hashlib
+import hmac
 import os
 import secrets
 from typing import Callable, Mapping
@@ -25,9 +26,11 @@ from app.repositories.operator_session_repository import OperatorSessionReposito
 
 OPERATOR_ID = "operator"
 SESSION_COOKIE_NAME = "qa_booking_operator_session"
+CSRF_COOKIE_NAME = "qa_booking_operator_csrf"
 SESSION_IDLE_TIMEOUT = timedelta(minutes=30)
 SESSION_ABSOLUTE_TIMEOUT = timedelta(hours=12)
 SESSION_TOKEN_BYTES = 32
+CSRF_TOKEN_BYTES = 32
 
 # argon2-cffi's RFC 9106 low-memory profile (its recommended default):
 # 64 MiB, three iterations, and four lanes. Reject externally configured hashes
@@ -48,6 +51,8 @@ class AuthConfigurationError(RuntimeError):
 class NewOperatorSession:
     token: str
     token_hash: str
+    csrf_token: str
+    csrf_token_hash: str
     operator_id: str
     created_at: datetime
     last_activity_at: datetime
@@ -124,10 +129,13 @@ def create_operator_session(
     token = token_factory(SESSION_TOKEN_BYTES)
     if not isinstance(token, str) or len(token) < 40:
         raise ValueError("Session token factory returned an invalid token")
+    csrf_token = create_csrf_token()
     token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
     return NewOperatorSession(
         token=token,
         token_hash=token_hash,
+        csrf_token=csrf_token,
+        csrf_token_hash=hash_csrf_token(csrf_token),
         operator_id=OPERATOR_ID,
         created_at=created_at,
         last_activity_at=created_at,
@@ -139,6 +147,25 @@ def hash_session_token(token: str | None) -> str | None:
     if not token or len(token) > 256:
         return None
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def hash_csrf_token(token: str | None) -> str | None:
+    if not token or len(token) > 256:
+        return None
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def create_csrf_token() -> str:
+    return secrets.token_urlsafe(CSRF_TOKEN_BYTES)
+
+
+def csrf_token_matches(token: str | None, expected_hash: str | None) -> bool:
+    token_hash = hash_csrf_token(token)
+    return bool(
+        token_hash
+        and expected_hash
+        and hmac.compare_digest(token_hash, expected_hash)
+    )
 
 
 def session_idle_cutoff(now: datetime) -> datetime:

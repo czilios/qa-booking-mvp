@@ -5,12 +5,14 @@ from calendar import monthrange
 import logging
 import os
 import re
+from urllib.parse import urlsplit
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Form, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
+from jinja2 import pass_context
 from httpx2 import request
 from pydantic import BaseModel, Field, field_validator
 import calendar
@@ -45,6 +47,7 @@ from app.repositories.web_inquiry_repository import WebInquiryRepository
 from app.rate_limiter import SlidingWindowRateLimiter
 from app.auth import (
     AuthConfigurationError,
+    CSRF_COOKIE_NAME,
     SESSION_ABSOLUTE_TIMEOUT,
     SESSION_COOKIE_NAME,
     authenticate_operator_session,
@@ -108,7 +111,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type"],
+    allow_headers=["Content-Type", "X-CSRF-Token"],
 )
 
 rate_limiter = SlidingWindowRateLimiter()
@@ -138,6 +141,15 @@ app.mount(
 )
 
 templates = Jinja2Templates(directory="app/templates")
+
+
+@pass_context
+def _template_csrf_token(context):
+    request = context.get("request")
+    return getattr(getattr(request, "state", None), "csrf_token", "")
+
+
+templates.env.globals["csrf_token"] = _template_csrf_token
 
 
 def calculate_deposit(total_amount: Decimal) -> Decimal:
@@ -372,6 +384,62 @@ def _session_cookie_secure(request: Request) -> bool:
     return session_cookie_secure()
 
 
+def _login_request_has_same_origin(request: Request) -> bool:
+    """Validate login provenance against explicitly configured application origins."""
+    trusted_origins = _csrf_trusted_origins()
+    if not trusted_origins:
+        return False
+
+    origin_value = request.headers.get("origin")
+    referer_value = request.headers.get("referer")
+    if origin_value is not None:
+        supplied_origin = _parse_origin(origin_value, allow_path=False)
+    elif referer_value is not None:
+        supplied_origin = _parse_origin(referer_value, allow_path=True)
+    else:
+        return False
+    return supplied_origin is not None and supplied_origin in trusted_origins
+
+
+def _parse_origin(value: str, *, allow_path: bool) -> tuple[str, str, int] | None:
+    """Normalize an HTTP(S) origin, rejecting userinfo and malformed components."""
+    value = value.strip()
+    if not value or value.lower() == "null" or any(char.isspace() for char in value):
+        return None
+    try:
+        parsed = urlsplit(value)
+        scheme = parsed.scheme.lower()
+        if (
+            scheme not in {"http", "https"}
+            or not parsed.hostname
+            or parsed.username is not None
+            or parsed.password is not None
+            or "\\" in parsed.netloc
+            or parsed.fragment
+            or parsed.netloc.endswith(":")
+            or (not allow_path and (parsed.path or parsed.query or "?" in value or "#" in value))
+        ):
+            return None
+        parsed_port = parsed.port
+        port = parsed_port if parsed_port is not None else (443 if scheme == "https" else 80)
+        return scheme, parsed.hostname.lower(), port
+    except ValueError:
+        return None
+
+
+def _csrf_trusted_origins() -> set[tuple[str, str, int]]:
+    """Load configured operator-app origins; never derive trust from request headers."""
+    configured = os.getenv("CSRF_TRUSTED_ORIGINS", "")
+    entries = [entry.strip() for entry in configured.split(",") if entry.strip()]
+    if not entries:
+        return set()
+
+    parsed_origins = [_parse_origin(entry, allow_path=False) for entry in entries]
+    if any(origin is None for origin in parsed_origins):
+        return set()
+    return {origin for origin in parsed_origins if origin is not None}
+
+
 def _database_error_code(error: Exception) -> int | None:
     args = getattr(error, "args", ())
     if args and isinstance(args[0], int):
@@ -436,6 +504,15 @@ def operator_login(
     password: str = Form(...),
     next: str | None = Form(None),
 ):
+    if not _csrf_trusted_origins():
+        logger.error("Login rejected because CSRF_TRUSTED_ORIGINS is missing or invalid")
+        raise HTTPException(
+            status_code=503,
+            detail="Login security configuration is unavailable.",
+        )
+    if not _login_request_has_same_origin(request):
+        raise HTTPException(status_code=403, detail="Login request origin is invalid.")
+
     password_hash, cookie_secure = _auth_configuration(request)
     enforce_rate_limit(
         request=request,
@@ -463,6 +540,7 @@ def operator_login(
         session = create_operator_session()
         OperatorSessionRepository(connection).create(
             token_hash=session.token_hash,
+            csrf_token_hash=session.csrf_token_hash,
             operator_id=session.operator_id,
             created_at=session.created_at,
             last_activity_at=session.last_activity_at,
@@ -493,6 +571,15 @@ def operator_login(
         path="/",
         secure=cookie_secure,
         httponly=True,
+        samesite="lax",
+    )
+    response.set_cookie(
+        key=CSRF_COOKIE_NAME,
+        value=session.csrf_token,
+        max_age=int(SESSION_ABSOLUTE_TIMEOUT.total_seconds()),
+        path="/",
+        secure=cookie_secure,
+        httponly=False,
         samesite="lax",
     )
     response.headers["Cache-Control"] = "no-store"
@@ -536,6 +623,13 @@ def operator_logout(request: Request):
         path="/",
         secure=cookie_secure,
         httponly=True,
+        samesite="lax",
+    )
+    response.delete_cookie(
+        key=CSRF_COOKIE_NAME,
+        path="/",
+        secure=cookie_secure,
+        httponly=False,
         samesite="lax",
     )
     response.headers["Cache-Control"] = "no-store"

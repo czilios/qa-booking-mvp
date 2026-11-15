@@ -70,6 +70,7 @@
         method="post"
         action="/ui/reservations/{{ reservation.id }}/cancel"
     >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button
             type="submit"
             class="cancel-button"

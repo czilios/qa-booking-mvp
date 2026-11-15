@@ -17,6 +17,7 @@ def _persist_session(connection, *, created_at):
     session = create_operator_session(now=created_at)
     OperatorSessionRepository(connection).create(
         token_hash=session.token_hash,
+        csrf_token_hash=session.csrf_token_hash,
         operator_id=session.operator_id,
         created_at=session.created_at,
         last_activity_at=session.last_activity_at,

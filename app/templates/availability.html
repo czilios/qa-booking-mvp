@@ -122,6 +122,7 @@
         </div>
 
         <form method="post" action="/ui/reservations">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
             <input
                 type="hidden"

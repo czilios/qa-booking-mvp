@@ -7,7 +7,15 @@ import pytest
 
 from app import access_control, main
 from app.access_control import OperatorAccessMiddleware
-from app.auth import SESSION_COOKIE_NAME
+from app.auth import CSRF_COOKIE_NAME, SESSION_COOKIE_NAME, hash_csrf_token
+
+
+TEST_CSRF_TOKEN = "access-control-test-csrf-token"
+
+
+def _set_operator_cookies(client, session_token="valid-session-token"):
+    client.cookies.set(SESSION_COOKIE_NAME, session_token)
+    client.cookies.set(CSRF_COOKIE_NAME, TEST_CSRF_TOKEN)
 
 
 class FakeConnection:
@@ -125,7 +133,11 @@ def test_valid_operator_session_reaches_actual_api_endpoint(monkeypatch):
     monkeypatch.setattr(
         access_control,
         "authenticate_operator_session",
-        lambda db_connection, token: {"operator_id": "operator"},
+        lambda db_connection, token: {
+            "id": 1,
+            "operator_id": "operator",
+            "csrf_token_hash": hash_csrf_token(TEST_CSRF_TOKEN),
+        },
     )
     monkeypatch.setattr(
         main,
@@ -134,7 +146,7 @@ def test_valid_operator_session_reaches_actual_api_endpoint(monkeypatch):
     )
     main.app.dependency_overrides[main.get_db_connection] = lambda: FakeConnection()
     client = TestClient(main.app)
-    client.cookies.set(SESSION_COOKIE_NAME, "valid-session-token")
+    _set_operator_cookies(client)
 
     try:
         response = client.get("/api/customers/123")
@@ -177,7 +189,11 @@ def test_valid_session_allows_actual_operator_ui_view(monkeypatch):
     monkeypatch.setattr(
         access_control,
         "authenticate_operator_session",
-        lambda db_connection, token: {"operator_id": "operator"},
+        lambda db_connection, token: {
+            "id": 1,
+            "operator_id": "operator",
+            "csrf_token_hash": hash_csrf_token(TEST_CSRF_TOKEN),
+        },
     )
     monkeypatch.setattr(main, "get_connection", lambda: ui_connection)
 
@@ -190,7 +206,7 @@ def test_valid_session_allows_actual_operator_ui_view(monkeypatch):
 
     monkeypatch.setattr(main, "CottageRepository", FakeCottageRepository)
     client = TestClient(main.app)
-    client.cookies.set(SESSION_COOKIE_NAME, "valid-session-token")
+    _set_operator_cookies(client)
 
     response = client.get("/ui")
 
@@ -210,7 +226,7 @@ def test_invalid_session_and_verification_error_deny_actual_operator_ui(monkeypa
         lambda db_connection, token: None,
     )
     client = TestClient(main.app)
-    client.cookies.set(SESSION_COOKIE_NAME, "expired-session-token")
+    _set_operator_cookies(client, "expired-session-token")
 
     invalid_session = client.get("/ui", follow_redirects=False)
     assert invalid_session.status_code == 303
@@ -235,10 +251,14 @@ def test_valid_session_allows_operator_api_and_ui(monkeypatch):
     monkeypatch.setattr(
         access_control,
         "authenticate_operator_session",
-        lambda db_connection, token: {"operator_id": "operator"},
+        lambda db_connection, token: {
+            "id": 1,
+            "operator_id": "operator",
+            "csrf_token_hash": hash_csrf_token(TEST_CSRF_TOKEN),
+        },
     )
     client = TestClient(_operator_test_app())
-    client.cookies.set(SESSION_COOKIE_NAME, "valid-session-token")
+    _set_operator_cookies(client)
 
     api_response = client.get("/api/private")
     ui_response = client.get("/ui/private")
@@ -260,7 +280,7 @@ def test_invalid_session_is_denied_for_api_and_ui(monkeypatch):
         lambda db_connection, token: None,
     )
     client = TestClient(_operator_test_app())
-    client.cookies.set(SESSION_COOKIE_NAME, "expired-session-token")
+    _set_operator_cookies(client, "expired-session-token")
 
     api_response = client.get("/api/private")
     ui_response = client.get("/ui/private", follow_redirects=False)
@@ -279,7 +299,7 @@ def test_session_verification_database_error_fails_closed(monkeypatch):
         Mock(side_effect=RuntimeError("database detail must not be returned")),
     )
     client = TestClient(main.app)
-    client.cookies.set(SESSION_COOKIE_NAME, "session-token")
+    _set_operator_cookies(client, "session-token")
 
     response = client.get("/api/reservations/123")
 
@@ -296,7 +316,7 @@ def test_session_authenticator_error_rolls_back_and_fails_closed(monkeypatch):
         Mock(side_effect=RuntimeError("session verification detail")),
     )
     client = TestClient(main.app)
-    client.cookies.set(SESSION_COOKIE_NAME, "session-token")
+    _set_operator_cookies(client, "session-token")
 
     response = client.get("/api/reservations/123")
 
@@ -324,13 +344,14 @@ def test_authentication_exceptions_remain_accessible(monkeypatch):
     client = TestClient(main.app)
 
     login_page = client.get("/login")
-    login_attempt = client.post("/login", data={"login": "operator", "password": "bad"})
-    logout = client.post("/logout", follow_redirects=False)
+    login_attempt = client.post(
+        "/login",
+        data={"login": "operator", "password": "bad"},
+        headers={"Origin": str(client.base_url).rstrip("/")},
+    )
 
     assert login_page.status_code == 200
     assert login_attempt.status_code == 401
-    assert logout.status_code == 303
-    assert logout.headers["location"] == "/login"
     main.rate_limiter.clear()
 
 
@@ -407,7 +428,7 @@ def test_root_health_and_cors_preflight_are_technical(monkeypatch):
         headers={
             "Origin": main.cors_origins[0],
             "Access-Control-Request-Method": "PUT",
-            "Access-Control-Request-Headers": "content-type",
+            "Access-Control-Request-Headers": "content-type,x-csrf-token",
         },
     )
 
@@ -423,4 +444,5 @@ def test_root_health_and_cors_preflight_are_technical(monkeypatch):
     assert preflight.status_code == 200
     assert preflight.headers["access-control-allow-origin"] == main.cors_origins[0]
     assert "PUT" in preflight.headers["access-control-allow-methods"]
+    assert "x-csrf-token" in preflight.headers["access-control-allow-headers"].lower()
     connection_factory.assert_not_called()

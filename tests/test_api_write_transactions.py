@@ -6,6 +6,8 @@ from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
 from app import main
+from app.auth import CSRF_COOKIE_NAME
+from tests.conftest import TEST_CSRF_TOKEN
 from app.transaction_retry import TransactionOutcomeUnknown, TransactionRetryExhausted
 
 
@@ -163,6 +165,8 @@ def test_write_dependency_commits_before_http_response_starts(
     probe = ResponseStartProbe(main.app)
     client = TestClient(probe)
     client.cookies.set(*valid_operator_session_cookie)
+    client.cookies.set(CSRF_COOKIE_NAME, TEST_CSRF_TOKEN)
+    client.headers["X-CSRF-Token"] = TEST_CSRF_TOKEN
     response = client.post(
         "/api/reservations",
         json={
@@ -201,6 +205,8 @@ def test_http_exception_after_write_rolls_back_without_commit(
 
     client = TestClient(main.app)
     client.cookies.set(*valid_operator_session_cookie)
+    client.cookies.set(CSRF_COOKIE_NAME, TEST_CSRF_TOKEN)
+    client.headers["X-CSRF-Token"] = TEST_CSRF_TOKEN
     response = client.post(
         "/api/reservations",
         json={
@@ -258,10 +264,15 @@ def test_http_exception_after_write_rolls_back_without_commit(
                     "last_name": "Retry",
                     "phone": "+48123456789",
                     "guests_count": 2,
+                    "csrf_token": TEST_CSRF_TOKEN,
                 }
             },
         ),
-        ("post", "/ui/inquiries/123/accept", {}),
+        (
+            "post",
+            "/ui/inquiries/123/accept",
+            {"data": {"csrf_token": TEST_CSRF_TOKEN}},
+        ),
     ],
 )
 @pytest.mark.parametrize("error_kind", ["exhausted", "unknown_outcome"])
@@ -301,6 +312,8 @@ def test_all_retry_endpoints_map_database_errors_to_safe_503(
 
     client = TestClient(main.app)
     client.cookies.set(*valid_operator_session_cookie)
+    client.cookies.set(CSRF_COOKIE_NAME, TEST_CSRF_TOKEN)
+    client.headers["X-CSRF-Token"] = TEST_CSRF_TOKEN
     response = getattr(client, method)(path, **request_data)
 
     assert response.status_code == 503

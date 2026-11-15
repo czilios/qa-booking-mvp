@@ -13,6 +13,7 @@ def test_new_migration_contract():
     migration_008 = (MIGRATIONS / "008_payment_bank_transaction.sql").read_text(encoding="utf-8")
     migration_009 = (MIGRATIONS / "009_customer_contact.sql").read_text(encoding="utf-8")
     migration_010 = (MIGRATIONS / "010_operator_sessions.sql").read_text(encoding="utf-8")
+    migration_011 = (MIGRATIONS / "011_operator_session_csrf.sql").read_text(encoding="utf-8")
 
     assert "REFERENCES reservation_sources(id)\n        ON DELETE RESTRICT" in migration_007
     assert "REFERENCES cottages(id)\n        ON DELETE SET NULL" in migration_007
@@ -64,6 +65,8 @@ def test_new_migration_contract():
     ):
         assert column in migration_010
     assert "CREATE TABLE users" not in migration_010
+    assert "ADD COLUMN csrf_token_hash CHAR(64)" in migration_011
+    assert "ascii_bin NULL" in migration_011
 
 
 def _copy_migrations(destination):
@@ -73,15 +76,15 @@ def _copy_migrations(destination):
 
 def test_migration_loader_accepts_future_contiguous_versions(monkeypatch, tmp_path):
     _copy_migrations(tmp_path)
-    (tmp_path / "011_future_change.sql").write_text(
+    (tmp_path / "012_future_change.sql").write_text(
         "CREATE TABLE future_change_011 (id INT);", encoding="utf-8"
     )
-    (tmp_path / "012_future_change.sql").write_text(
+    (tmp_path / "013_future_change.sql").write_text(
         "CREATE TABLE future_change_012 (id INT);", encoding="utf-8"
     )
     monkeypatch.setattr(runner, "MIGRATION_DIR", tmp_path)
 
-    assert [migration[0] for migration in runner._load_migrations()] == list(range(1, 13))
+    assert [migration[0] for migration in runner._load_migrations()] == list(range(1, 14))
 
 
 def test_migration_loader_rejects_gaps_and_duplicate_versions(monkeypatch, tmp_path):
@@ -173,18 +176,18 @@ def run(connection, mode="existing", **kwargs):
 def test_fresh_migrations_check_sources_around_seed_and_record_order():
     connection = FakeConnection()
     run(connection, mode="fresh")
-    assert [item[0] for item in connection.history] == list(range(1, 11))
+    assert [item[0] for item in connection.history] == list(range(1, 12))
     seed = next(index for index, (query, _) in enumerate(connection.executed) if runner.SOURCE_INSERT.match(query))
     assert connection.executed[seed - 1][0].startswith("SELECT id, code")
     assert connection.executed[seed + 1][0].startswith("SELECT id, code")
-    assert connection.commits == 10
+    assert connection.commits == 11
 
 
 def test_existing_verified_history_runs_only_pending_migrations():
     connection = FakeConnection(sources=list(enumerate(runner.SOURCE_CODES, 1)), history=history(), objects={"schema_migrations", "reservation_sources"})
     run(connection)
-    assert [item[0] for item in connection.history] == list(range(1, 11))
-    assert connection.commits == 4
+    assert [item[0] for item in connection.history] == list(range(1, 12))
+    assert connection.commits == 5
 
 
 @pytest.mark.parametrize("connection,mode", [
@@ -221,7 +224,7 @@ def test_explicit_verification_is_required_before_any_query():
 @pytest.mark.parametrize("bad_history", [
     history()[:5] + [(6, "wrong.sql", history()[5][2])],
     history()[:5] + [(6, history()[5][1], "0" * 64)],
-    history(10) + [(11, "011_unknown.sql", "0" * 64)],
+    history(11) + [(12, "012_unknown.sql", "0" * 64)],
 ])
 def test_mismatched_history_is_rejected_without_ddl(bad_history):
     connection = FakeConnection(sources=list(enumerate(runner.SOURCE_CODES, 1)), history=bad_history, objects={"schema_migrations", "reservation_sources"})
@@ -289,7 +292,7 @@ def test_dict_cursor_and_compatibility_prefixed_version():
 
     connection = DictConnection(sources=list(enumerate(runner.SOURCE_CODES, 1)), history=history(10), objects={"schema_migrations", "reservation_sources"})
     run(connection)
-    assert connection.commits == 0
+    assert connection.commits == 1
 
 
 def test_unavailable_lock_prevents_any_mutation():

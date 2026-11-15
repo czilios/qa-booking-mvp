@@ -47,6 +47,7 @@
     {% endif %}
 
     <form method="post" action="/ui/bank-transactions">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         {% if reservation_lookup %}
             <input type="hidden" name="reservation_number" value="#{{ reservation_lookup.id }}">

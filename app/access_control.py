@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import Enum
 import logging
 from typing import Sequence
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode
 
 from starlette.concurrency import run_in_threadpool
 from starlette.requests import Request
@@ -13,8 +13,10 @@ from starlette.responses import JSONResponse, PlainTextResponse, RedirectRespons
 from starlette.routing import Match, Mount
 
 from app.auth import (
+    CSRF_COOKIE_NAME,
     SESSION_COOKIE_NAME,
     authenticate_operator_session,
+    csrf_token_matches,
     safe_login_redirect,
 )
 from app.database import get_connection
@@ -137,7 +139,8 @@ class OperatorAccessMiddleware:
             return
 
         category = classify_access(path, method)
-        if category is not AccessCategory.OPERATOR_ONLY:
+        is_logout = method == "POST" and path == "/logout"
+        if category is not AccessCategory.OPERATOR_ONLY and not is_logout:
             await self.app(scope, receive, send)
             return
 
@@ -147,8 +150,12 @@ class OperatorAccessMiddleware:
             await self._unauthorized(scope, receive, send)
             return
 
+        csrf_cookie = request.cookies.get(CSRF_COOKIE_NAME)
         try:
-            session = await run_in_threadpool(self._verify_session, token)
+            session = await run_in_threadpool(
+                self._verify_session,
+                token,
+            )
         except Exception:
             if path.startswith("/api/"):
                 response = JSONResponse(
@@ -165,14 +172,79 @@ class OperatorAccessMiddleware:
             await response(scope, receive, send)
             return
 
-        if session is None:
+        if session is None or not session.get("csrf_token_hash"):
+            # Sessions created before the CSRF migration cannot authenticate
+            # state-changing requests; require a fresh login to initialize one.
             await self._unauthorized(scope, receive, send)
             return
+
+        csrf_token = (
+            csrf_cookie
+            if csrf_token_matches(csrf_cookie, session.get("csrf_token_hash"))
+            else None
+        )
+        replay_receive = receive
+        if method in {"POST", "PUT", "PATCH", "DELETE"}:
+            if path.startswith("/api/"):
+                supplied_csrf_token = request.headers.get("x-csrf-token")
+            else:
+                supplied_csrf_token, replay_receive = await self._form_csrf_token(
+                    scope,
+                    receive,
+                )
+            if not csrf_token_matches(
+                supplied_csrf_token,
+                session.get("csrf_token_hash"),
+            ):
+                response = JSONResponse(
+                    {"detail": "CSRF token is missing or invalid."},
+                    status_code=403,
+                    headers={"Cache-Control": "no-store"},
+                ) if path.startswith("/api/") else PlainTextResponse(
+                    "CSRF token is missing or invalid.",
+                    status_code=403,
+                    headers={"Cache-Control": "no-store"},
+                )
+                await response(scope, receive, send)
+                return
 
         scope.setdefault("state", {})["operator"] = {
             "operator_id": session["operator_id"],
         }
-        await self.app(scope, receive, send)
+        scope.setdefault("state", {})["csrf_token"] = csrf_token or ""
+
+        async def send_with_security_headers(message):
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                if not any(name.lower() == b"cache-control" for name, _ in headers):
+                    headers.append((b"cache-control", b"no-store"))
+                message["headers"] = headers
+            await send(message)
+
+        await self.app(scope, replay_receive, send_with_security_headers)
+
+    @staticmethod
+    async def _form_csrf_token(scope, receive):
+        request = Request(scope, receive=receive)
+        try:
+            body = await request.body()
+            form_values = parse_qs(body.decode("utf-8"), keep_blank_values=True)
+            values = form_values.get("csrf_token", [])
+            csrf_token = values[0] if len(values) == 1 else None
+        except (UnicodeDecodeError, ValueError):
+            body = b""
+            csrf_token = None
+
+        replayed = False
+
+        async def replay_receive():
+            nonlocal replayed
+            if replayed:
+                return {"type": "http.disconnect"}
+            replayed = True
+            return {"type": "http.request", "body": body, "more_body": False}
+
+        return csrf_token, replay_receive
 
     @staticmethod
     def _verify_session(token: str):

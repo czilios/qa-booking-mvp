@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import hashlib
 import secrets
 
 import pytest
@@ -91,6 +92,10 @@ def test_session_token_is_random_and_only_its_digest_is_persisted():
 
     assert len(session.token) >= 40
     assert session.token_hash == hash_session_token(session.token)
+    assert session.csrf_token_hash == hashlib.sha256(
+        session.csrf_token.encode("utf-8")
+    ).hexdigest()
+    assert session.csrf_token_hash != session.csrf_token
     assert session.token_hash != session.token
     assert len(session.token_hash) == 64
     assert session.operator_id == "operator"

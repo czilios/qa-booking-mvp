@@ -18,6 +18,7 @@ class OperatorSessionRepository:
         self,
         *,
         token_hash: str,
+        csrf_token_hash: str,
         operator_id: str,
         created_at: datetime,
         last_activity_at: datetime,
@@ -28,15 +29,17 @@ class OperatorSessionRepository:
                 """
                 INSERT INTO operator_sessions (
                     token_hash,
+                    csrf_token_hash,
                     operator_id,
                     created_at,
                     last_activity_at,
                     absolute_expires_at
                 )
-                VALUES (%s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 """,
                 (
                     token_hash,
+                    csrf_token_hash,
                     operator_id,
                     created_at,
                     last_activity_at,
@@ -56,7 +59,7 @@ class OperatorSessionRepository:
         with self.connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT id, operator_id, created_at, last_activity_at,
+                SELECT id, operator_id, csrf_token_hash, created_at, last_activity_at,
                        absolute_expires_at, revoked_at
                 FROM operator_sessions
                 WHERE token_hash = %s

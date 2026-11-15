@@ -3,6 +3,10 @@ import inspect
 
 from app.database import get_test_connection
 from app.repositories.reservation_repository import ReservationRepository
+from app.auth import CSRF_COOKIE_NAME, hash_csrf_token
+
+
+TEST_CSRF_TOKEN = "unit-test-csrf-token"
 
 
 @pytest.fixture
@@ -28,7 +32,13 @@ def valid_operator_session_cookie(monkeypatch):
         access_control,
         "authenticate_operator_session",
         lambda connection, supplied_token: (
-            {"operator_id": "operator"} if supplied_token == token else None
+            {
+                "id": 1,
+                "operator_id": "operator",
+                "csrf_token_hash": hash_csrf_token(TEST_CSRF_TOKEN),
+            }
+            if supplied_token == token
+            else None
         ),
     )
     return SESSION_COOKIE_NAME, token
