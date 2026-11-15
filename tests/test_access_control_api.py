@@ -2,6 +2,7 @@ from unittest.mock import Mock
 
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
+from fastapi.routing import APIRoute
 import pytest
 
 from app import access_control, main
@@ -52,6 +53,83 @@ def test_anonymous_api_gets_json_401_without_database_access(monkeypatch):
     assert response.status_code == 401
     assert response.json() == {"detail": "Authentication required."}
     connection_factory.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("method", "path", "kwargs"),
+    [
+        ("GET", "/api/customers/123", {}),
+        (
+            "POST",
+            "/api/customers",
+            {"json": {"first_name": "Test", "last_name": "Operator"}},
+        ),
+    ],
+)
+def test_anonymous_requests_to_operational_api_routes_get_json_401(
+    method, path, kwargs, monkeypatch
+):
+    connection_factory = Mock(side_effect=AssertionError("unexpected DB access"))
+    monkeypatch.setattr(access_control, "get_connection", connection_factory)
+
+    response = TestClient(main.app).request(method, path, **kwargs)
+
+    assert response.status_code == 401
+    assert response.headers["content-type"].startswith("application/json")
+    assert response.json() == {"detail": "Authentication required."}
+    connection_factory.assert_not_called()
+
+
+def test_every_registered_operational_api_route_is_operator_only():
+    public_routes = {
+        ("GET", "/api/availability"),
+        ("POST", "/api/inquiries"),
+    }
+
+    api_routes = [
+        route
+        for route in main.app.router.routes
+        if isinstance(route, APIRoute) and route.path.startswith("/api/")
+    ]
+
+    assert api_routes
+    for route in api_routes:
+        for method in route.methods or set():
+            pair = (method, route.path)
+            if pair in public_routes:
+                category = access_control.classify_access(route.path, method)
+                assert category is access_control.AccessCategory.PUBLIC
+            else:
+                category = access_control.classify_access(route.path, method)
+                assert category is access_control.AccessCategory.OPERATOR_ONLY
+
+
+def test_valid_operator_session_reaches_actual_api_endpoint(monkeypatch):
+    connection = FakeConnection()
+    monkeypatch.setattr(access_control, "get_connection", lambda: connection)
+    monkeypatch.setattr(
+        access_control,
+        "authenticate_operator_session",
+        lambda db_connection, token: {"operator_id": "operator"},
+    )
+    monkeypatch.setattr(
+        main,
+        "get_customer",
+        lambda **kwargs: {"id": kwargs["customer_id"], "first_name": "Test"},
+    )
+    main.app.dependency_overrides[main.get_db_connection] = lambda: FakeConnection()
+    client = TestClient(main.app)
+    client.cookies.set(SESSION_COOKIE_NAME, "valid-session-token")
+
+    try:
+        response = client.get("/api/customers/123")
+    finally:
+        main.app.dependency_overrides.pop(main.get_db_connection, None)
+
+    assert response.status_code == 200
+    assert response.json() == {"id": 123, "first_name": "Test"}
+    assert connection.commits == 1
+    assert connection.closed
 
 
 def test_anonymous_ui_redirects_to_login(monkeypatch):
