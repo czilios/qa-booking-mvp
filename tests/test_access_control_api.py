@@ -143,6 +143,77 @@ def test_anonymous_ui_redirects_to_login(monkeypatch):
     connection_factory.assert_not_called()
 
 
+@pytest.mark.parametrize("path", ["/ui", "/ui/reports/overall", "/ui/inquiries"])
+def test_anonymous_operator_ui_routes_redirect_to_login(path, monkeypatch):
+    connection_factory = Mock(side_effect=AssertionError("unexpected DB access"))
+    monkeypatch.setattr(access_control, "get_connection", connection_factory)
+
+    response = TestClient(main.app).get(path, follow_redirects=False)
+
+    assert response.status_code == 303
+    assert response.headers["location"].startswith("/login?next=")
+    connection_factory.assert_not_called()
+
+
+def test_valid_session_allows_actual_operator_ui_view(monkeypatch):
+    session_connection = FakeConnection()
+    ui_connection = FakeConnection()
+    monkeypatch.setattr(access_control, "get_connection", lambda: session_connection)
+    monkeypatch.setattr(
+        access_control,
+        "authenticate_operator_session",
+        lambda db_connection, token: {"operator_id": "operator"},
+    )
+    monkeypatch.setattr(main, "get_connection", lambda: ui_connection)
+
+    class FakeCottageRepository:
+        def __init__(self, db_connection):
+            assert db_connection is ui_connection
+
+        def get_active_cottage_ids(self):
+            return [1]
+
+    monkeypatch.setattr(main, "CottageRepository", FakeCottageRepository)
+    client = TestClient(main.app)
+    client.cookies.set(SESSION_COOKIE_NAME, "valid-session-token")
+
+    response = client.get("/ui")
+
+    assert response.status_code == 200
+    assert "Dostępność" in response.text
+    assert session_connection.commits == 1
+    assert session_connection.closed
+    assert ui_connection.closed
+
+
+def test_invalid_session_and_verification_error_deny_actual_operator_ui(monkeypatch):
+    connection = FakeConnection()
+    monkeypatch.setattr(access_control, "get_connection", lambda: connection)
+    monkeypatch.setattr(
+        access_control,
+        "authenticate_operator_session",
+        lambda db_connection, token: None,
+    )
+    client = TestClient(main.app)
+    client.cookies.set(SESSION_COOKIE_NAME, "expired-session-token")
+
+    invalid_session = client.get("/ui", follow_redirects=False)
+    assert invalid_session.status_code == 303
+    assert invalid_session.headers["location"].startswith("/login?next=")
+
+    monkeypatch.setattr(
+        access_control,
+        "authenticate_operator_session",
+        Mock(side_effect=RuntimeError("private verification detail")),
+    )
+    verification_error = client.get("/ui", follow_redirects=False)
+
+    assert verification_error.status_code == 503
+    assert "private verification detail" not in verification_error.text
+    assert connection.rollbacks == 1
+    assert connection.closed
+
+
 def test_valid_session_allows_operator_api_and_ui(monkeypatch):
     connection = FakeConnection()
     monkeypatch.setattr(access_control, "get_connection", lambda: connection)
