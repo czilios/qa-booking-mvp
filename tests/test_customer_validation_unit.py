@@ -4,12 +4,16 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app import main
+from app.auth import CSRF_COOKIE_NAME
 from app.customer_service import create_customer, update_customer
+from tests.conftest import TEST_CSRF_TOKEN
 
 
 def _authenticated_client(session_cookie):
     client = TestClient(main.app)
     client.cookies.set(*session_cookie)
+    client.cookies.set(CSRF_COOKIE_NAME, TEST_CSRF_TOKEN)
+    client.headers["X-CSRF-Token"] = TEST_CSRF_TOKEN
     return client
 
 

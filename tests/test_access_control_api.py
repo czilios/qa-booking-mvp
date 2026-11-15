@@ -337,6 +337,7 @@ def test_unknown_route_remains_404_and_wrong_method_remains_405():
 
 
 def test_authentication_exceptions_remain_accessible(monkeypatch):
+    monkeypatch.setenv("CSRF_TRUSTED_ORIGINS", "http://testserver")
     monkeypatch.setattr(main, "_auth_configuration", lambda request: ("hash", False))
     monkeypatch.setattr(main, "verify_operator_credentials", lambda *args: False)
     monkeypatch.setattr(main, "_session_cookie_secure", lambda request: False)

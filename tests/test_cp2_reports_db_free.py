@@ -313,6 +313,7 @@ def test_manual_review_is_shown_in_template_and_excluded_from_carry(monkeypatch)
 
     template_dir = Path(__file__).resolve().parents[1] / "app" / "templates"
     environment = Environment(loader=FileSystemLoader(template_dir), autoescape=True)
+    environment.globals["csrf_token"] = lambda: ""
     html = environment.get_template("accounting_report.html").render(
         reports=reports, years=[2026], year=2026, month=0,
         url_for=lambda *args, **kwargs: "/static/styles.css",
