@@ -280,15 +280,6 @@ def get_api_write_connection():
         connection.close()
 
 
-def expire_payment_holds(db_connection) -> int:
-    expired_count = ReservationRepository(db_connection).expire_pending_reservations(
-        datetime.now()
-    )
-    if expired_count:
-        db_connection.commit()
-    return expired_count
-
-
 def get_availability_service(
     db_connection=Depends(get_db_connection),
 ):
@@ -554,8 +545,6 @@ def check_availability(
             detail="check_out must be after check_in",
         )
 
-    expire_payment_holds(db_connection)
-
     available_cottages = availability_service.get_available_cottages(
         check_in=check_in,
         check_out=check_out,
@@ -620,7 +609,6 @@ def create_web_inquiry_endpoint(
             detail="Consent is required",
         )
 
-    expire_payment_holds(db_connection)
     availability_service = AvailabilityService(
         reservation_repository=ReservationRepository(db_connection),
         block_repository=BlockRepository(db_connection),
@@ -1386,7 +1374,6 @@ def web_inquiries_ui(
     request: Request,
     db_connection=Depends(get_db_connection),
 ):
-    expire_payment_holds(db_connection)
     inquiries = WebInquiryRepository(db_connection).list_all()
     for inquiry in inquiries:
         inquiry["offer_expires_at"] = (

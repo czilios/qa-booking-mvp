@@ -331,10 +331,33 @@ def test_operator_sending_offer_creates_pending_reservation_and_blocks_cottage(
             "guests_count": 2,
         },
     )
-    assert cottage_id in expired_availability.json()["cottages"]
+    assert cottage_id not in expired_availability.json()["cottages"]
     with db_connection.cursor() as cursor:
         cursor.execute("SELECT status FROM reservations WHERE id = %s", (reservation_id,))
-        assert cursor.fetchone()["status"] == "EXPIRED"
+        assert cursor.fetchone()["status"] == "PENDING"
+
+    pending_inquiry = api_client.post(
+        "/api/inquiries",
+        json={
+            "full_name": "Spóźniona rezerwacja",
+            "phone": "+48600999888",
+            "email": "late-payment@example.com",
+            "check_in": "2050-07-10",
+            "check_out": "2050-07-17",
+            "guests_count": 2,
+            "preferred_cottage_id": cottage_id,
+            "consent": True,
+        },
+    )
+    assert pending_inquiry.status_code == 201
+    created_web_inquiry_cleanup.append(pending_inquiry.json()["id"])
+    assert pending_inquiry.json()["preferred_cottage_available"] is False
+
+    panel_after_expiry = api_client.get("/ui/inquiries")
+    assert panel_after_expiry.status_code == 200
+    with db_connection.cursor() as cursor:
+        cursor.execute("SELECT status FROM reservations WHERE id = %s", (reservation_id,))
+        assert cursor.fetchone()["status"] == "PENDING"
 
 
 def test_honeypot_submission_is_acknowledged_without_being_saved(

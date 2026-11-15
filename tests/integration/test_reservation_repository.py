@@ -89,6 +89,59 @@ def test_get_active_reservations(db_connection):
     assert confirmed_id in reservation_ids
     assert cancelled_id not in reservation_ids
 
+
+def test_get_active_reservations_keeps_pending_regardless_of_expiry(db_connection):
+    repository = ReservationRepository(db_connection)
+    check_in = date(2037, 7, 10)
+    check_out = date(2037, 7, 17)
+    pending_ids = set()
+
+    for cottage_id, expires_at in (
+        (1, datetime(2026, 1, 1)),
+        (2, datetime(2038, 1, 1)),
+        (3, None),
+    ):
+        pending_ids.add(
+            repository.create(
+                cottage_id=cottage_id,
+                source_id=1,
+                check_in=check_in,
+                check_out=check_out,
+                guests_count=2,
+                status="PENDING",
+                expires_at=expires_at,
+            )
+        )
+
+    reservations = repository.get_active_reservations()
+    reservation_ids = {reservation["id"] for reservation in reservations}
+
+    assert pending_ids <= reservation_ids
+
+
+def test_get_active_reservations_for_update_keeps_expired_pending(db_connection):
+    repository = ReservationRepository(db_connection)
+    pending_ids = {
+        repository.create(
+            cottage_id=1,
+            source_id=1,
+            check_in=date(2037, 7, 10),
+            check_out=date(2037, 7, 17),
+            guests_count=2,
+            status="PENDING",
+            expires_at=expires_at,
+        )
+        for expires_at in (
+            datetime(2026, 1, 1),
+            datetime(2038, 1, 1),
+            None,
+        )
+    }
+
+    reservations = repository.get_active_reservations_for_update(1)
+
+    assert pending_ids <= {reservation["id"] for reservation in reservations}
+
 def test_update_reservation(db_connection):
     repository = ReservationRepository(db_connection)
 

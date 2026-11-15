@@ -40,14 +40,6 @@ def confirm_reservation_after_deposit(
         "CONFIRMED",
     )
     
-def expire_pending_reservations(
-    connection: Connection,
-    now: datetime,
-) -> int:
-    repository = ReservationRepository(connection)
-
-    return repository.expire_pending_reservations(now)
-
 def create_reservation(
     connection: Connection,
     cottage_id: int,

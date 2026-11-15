@@ -171,24 +171,6 @@ class ReservationRepository:
             if cursor.rowcount == 0:
                 raise ValueError("Reservation not found")
 
-    def expire_pending_reservations(
-        self,
-        now: datetime,
-    ) -> int:
-        with self.connection.cursor() as cursor:
-            cursor.execute(
-                """
-                UPDATE reservations
-                SET status = 'EXPIRED'
-                WHERE status = 'PENDING'
-                  AND expires_at IS NOT NULL
-                  AND expires_at <= %s
-                """,
-                (now,),
-            )
-
-            return cursor.rowcount
-
     def get_active_reservations(self):
         with self.connection.cursor() as cursor:
             cursor.execute(
@@ -202,11 +184,6 @@ class ReservationRepository:
                     status
                 FROM reservations
                 WHERE status IN ('PENDING', 'CONFIRMED')
-                  AND (
-                    status = 'CONFIRMED'
-                    OR expires_at IS NULL
-                    OR expires_at > CURRENT_TIMESTAMP
-                  )
                 """
             )
 
@@ -221,11 +198,6 @@ class ReservationRepository:
                 FROM reservations
                 WHERE cottage_id = %s
                   AND status IN ('PENDING', 'CONFIRMED')
-                  AND (
-                    status = 'CONFIRMED'
-                    OR expires_at IS NULL
-                    OR expires_at > CURRENT_TIMESTAMP
-                  )
                 FOR UPDATE
                 """,
                 (cottage_id,),

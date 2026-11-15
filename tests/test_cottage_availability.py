@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 import pytest
 
@@ -31,6 +31,31 @@ def test_active_reservation_blocks_cottage(reservation_status):
     result = find_available_cottages(
         COTTAGES,
         reservations,
+        date(2026, 8, 20),
+        date(2026, 8, 25),
+        [],
+    )
+
+    assert 1 not in result
+
+
+@pytest.mark.parametrize(
+    "expires_at",
+    [datetime(2026, 8, 16), datetime(2026, 8, 18), None],
+    ids=["past", "future", "unset"],
+)
+def test_pending_reservation_blocks_cottage_regardless_of_expiry(expires_at):
+    reservation = {
+        "cottage_id": 1,
+        "check_in": date(2026, 8, 17),
+        "check_out": date(2026, 8, 23),
+        "status": "PENDING",
+        "expires_at": expires_at,
+    }
+
+    result = find_available_cottages(
+        COTTAGES,
+        [reservation],
         date(2026, 8, 20),
         date(2026, 8, 25),
         [],

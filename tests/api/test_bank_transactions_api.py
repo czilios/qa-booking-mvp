@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from app.repositories.bank_transaction_repository import (
@@ -228,7 +228,7 @@ def test_bank_transactions_ui_post_rejects_negative_amount(
     assert response.status_code == 400
 
 
-def test_bank_transactions_ui_links_direct_deposit_to_reservation(
+def test_bank_transactions_ui_links_late_deposit_to_pending_reservation(
     api_client,
     db_connection,
     created_reservation_cleanup,
@@ -242,6 +242,7 @@ def test_bank_transactions_ui_links_direct_deposit_to_reservation(
         check_out=date(2026, 8, 9),
         guests_count=2,
         status="PENDING",
+        expires_at=datetime(2026, 6, 1),
         total_amount=Decimal("2100.00"),
         deposit_amount=Decimal("630.00"),
         is_test_data=True,
