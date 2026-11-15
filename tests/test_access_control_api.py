@@ -104,6 +104,21 @@ def test_every_registered_operational_api_route_is_operator_only():
                 assert category is access_control.AccessCategory.OPERATOR_ONLY
 
 
+def test_no_registered_operator_ui_route_is_accidentally_public():
+    ui_routes = [
+        route
+        for route in main.app.router.routes
+        if isinstance(route, APIRoute) and route.path.startswith("/ui")
+    ]
+
+    assert ui_routes
+    for route in ui_routes:
+        for method in route.methods or set():
+            assert access_control.classify_access(
+                route.path, method
+            ) is access_control.AccessCategory.OPERATOR_ONLY
+
+
 def test_valid_operator_session_reaches_actual_api_endpoint(monkeypatch):
     connection = FakeConnection()
     monkeypatch.setattr(access_control, "get_connection", lambda: connection)
