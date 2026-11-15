@@ -56,6 +56,7 @@ from app.auth import (
     verify_operator_credentials,
 )
 from app.repositories.operator_session_repository import OperatorSessionRepository
+from app.access_control import OperatorAccessMiddleware, api_docs_enabled
 
 from app.database import get_connection
 from app.transaction_retry import (
@@ -80,7 +81,20 @@ async def lifespan(application):
     yield
 
 
-app = FastAPI(lifespan=lifespan)
+_api_docs_enabled = api_docs_enabled(os.getenv("APP_ENV"))
+app = FastAPI(
+    lifespan=lifespan,
+    docs_url="/docs" if _api_docs_enabled else None,
+    redoc_url="/redoc" if _api_docs_enabled else None,
+    openapi_url="/openapi.json" if _api_docs_enabled else None,
+)
+
+# Register access control first so CORS is outermost and can answer preflights
+# before any session lookup or database access.
+app.add_middleware(
+    OperatorAccessMiddleware,
+    routes=app.router.routes,
+)
 
 cors_origins = [
     origin.strip()
@@ -93,7 +107,7 @@ cors_origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type"],
 )
 
@@ -327,6 +341,11 @@ MONTH_NAMES_PL_GENITIVE = {
 @app.get("/")
 def read_root():
     return {"message": "QA Booking API"}
+
+
+@app.get("/health", include_in_schema=False)
+def health_check():
+    return {"status": "ok"}
 
 
 def _auth_configuration(request: Request) -> tuple[str, bool]:

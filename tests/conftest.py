@@ -5,6 +5,35 @@ from app.database import get_test_connection
 from app.repositories.reservation_repository import ReservationRepository
 
 
+@pytest.fixture
+def valid_operator_session_cookie(monkeypatch):
+    """Provide a valid in-memory session for tests exercising protected routes."""
+    from app import access_control
+
+    from app.auth import SESSION_COOKIE_NAME
+
+    class SessionConnection:
+        def commit(self):
+            pass
+
+        def rollback(self):
+            pass
+
+        def close(self):
+            pass
+
+    token = "unit-test-operator-session-token"
+    monkeypatch.setattr(access_control, "get_connection", SessionConnection)
+    monkeypatch.setattr(
+        access_control,
+        "authenticate_operator_session",
+        lambda connection, supplied_token: (
+            {"operator_id": "operator"} if supplied_token == token else None
+        ),
+    )
+    return SESSION_COOKIE_NAME, token
+
+
 def _apply_test_data_default(kwargs, is_test_data_explicit):
     if not is_test_data_explicit:
         kwargs["is_test_data"] = True

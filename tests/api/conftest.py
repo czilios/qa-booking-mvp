@@ -6,7 +6,7 @@ from app.main import app, get_api_write_connection, get_db_connection, rate_limi
 
 
 @pytest.fixture
-def api_client(db_connection, monkeypatch):
+def api_client(db_connection, monkeypatch, valid_operator_session_cookie):
     rate_limiter.clear()
     app.dependency_overrides[get_db_connection] = lambda: db_connection
     app.dependency_overrides[get_api_write_connection] = lambda: db_connection
@@ -26,7 +26,9 @@ def api_client(db_connection, monkeypatch):
         run_test_transaction,
     )
 
-    yield TestClient(app)
+    client = TestClient(app)
+    client.cookies.set(*valid_operator_session_cookie)
+    yield client
 
     app.dependency_overrides.clear()
     rate_limiter.clear()

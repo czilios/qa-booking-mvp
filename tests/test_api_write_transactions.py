@@ -128,7 +128,9 @@ def test_api_write_dependency_opens_connection_only_after_being_requested(
     dependency.close()
 
 
-def test_write_dependency_commits_before_http_response_starts(monkeypatch):
+def test_write_dependency_commits_before_http_response_starts(
+    monkeypatch, valid_operator_session_cookie
+):
     connection = FakeConnection()
     monkeypatch.setattr(main, "get_connection", lambda: connection)
 
@@ -159,7 +161,9 @@ def test_write_dependency_commits_before_http_response_starts(monkeypatch):
             await self.app(scope, receive, capture_send)
 
     probe = ResponseStartProbe(main.app)
-    response = TestClient(probe).post(
+    client = TestClient(probe)
+    client.cookies.set(*valid_operator_session_cookie)
+    response = client.post(
         "/api/reservations",
         json={
             "cottage_id": 1,
@@ -174,7 +178,9 @@ def test_write_dependency_commits_before_http_response_starts(monkeypatch):
     assert probe.events_at_response_start == ["operation", "commit"]
 
 
-def test_http_exception_after_write_rolls_back_without_commit(monkeypatch):
+def test_http_exception_after_write_rolls_back_without_commit(
+    monkeypatch, valid_operator_session_cookie
+):
     connection = FakeConnection()
     monkeypatch.setattr(main, "get_connection", lambda: connection)
 
@@ -193,7 +199,9 @@ def test_http_exception_after_write_rolls_back_without_commit(monkeypatch):
 
     monkeypatch.setattr(main, "create_reservation", fail_after_write)
 
-    response = TestClient(main.app).post(
+    client = TestClient(main.app)
+    client.cookies.set(*valid_operator_session_cookie)
+    response = client.post(
         "/api/reservations",
         json={
             "cottage_id": 1,
@@ -258,7 +266,12 @@ def test_http_exception_after_write_rolls_back_without_commit(monkeypatch):
 )
 @pytest.mark.parametrize("error_kind", ["exhausted", "unknown_outcome"])
 def test_all_retry_endpoints_map_database_errors_to_safe_503(
-    monkeypatch, method, path, request_data, error_kind
+    monkeypatch,
+    valid_operator_session_cookie,
+    method,
+    path,
+    request_data,
+    error_kind,
 ):
     if error_kind == "exhausted":
         runner_error = TransactionRetryExhausted(
@@ -286,7 +299,9 @@ def test_all_retry_endpoints_map_database_errors_to_safe_503(
         Mock(side_effect=runner_error),
     )
 
-    response = getattr(TestClient(main.app), method)(path, **request_data)
+    client = TestClient(main.app)
+    client.cookies.set(*valid_operator_session_cookie)
+    response = getattr(client, method)(path, **request_data)
 
     assert response.status_code == 503
     assert response.json()["detail"] == expected_detail
