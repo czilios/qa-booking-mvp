@@ -78,42 +78,42 @@
                         {% if inquiry.reservation_id %}
                             <span class="inquiry-action-note">Termin jest zablokowany przez rezerwację.</span>
                         {% elif inquiry.status == "NEW" %}
-                            <form method="post" action="/ui/inquiries/{{ inquiry.id }}/status">
+                            <form method="post" action="{{ ui_url(request, '/ui/inquiries/' ~ inquiry.id ~ '/status') }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <input type="hidden" name="status" value="IN_PROGRESS">
                                 <button type="submit" class="inquiry-action-button inquiry-action-neutral">Rozpocznij obsługę</button>
                             </form>
-                            <form method="post" action="/ui/inquiries/{{ inquiry.id }}/status">
+                            <form method="post" action="{{ ui_url(request, '/ui/inquiries/' ~ inquiry.id ~ '/status') }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <input type="hidden" name="status" value="REJECTED">
                                 <button type="submit" class="inquiry-action-button inquiry-action-reject">Odrzuć</button>
                             </form>
                         {% elif inquiry.status == "IN_PROGRESS" and inquiry.message_sent_at and not inquiry.offer_expired %}
-                            <form method="post" action="/ui/inquiries/{{ inquiry.id }}/accept">
+                            <form method="post" action="{{ ui_url(request, '/ui/inquiries/' ~ inquiry.id ~ '/accept') }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="inquiry-action-button inquiry-action-accept">Akceptuj i zablokuj termin</button>
                             </form>
-                            <a class="inquiry-action-button inquiry-action-template" href="/ui/inquiries/{{ inquiry.id }}/template">Podgląd szablonu</a>
-                            <form method="post" action="/ui/inquiries/{{ inquiry.id }}/status">
+                            <a class="inquiry-action-button inquiry-action-template" href="{{ ui_url(request, '/ui/inquiries/' ~ inquiry.id ~ '/template') }}">Podgląd szablonu</a>
+                            <form method="post" action="{{ ui_url(request, '/ui/inquiries/' ~ inquiry.id ~ '/status') }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <input type="hidden" name="status" value="REJECTED">
                                 <button type="submit" class="inquiry-action-button inquiry-action-reject">Odrzuć</button>
                             </form>
                         {% elif inquiry.status == "IN_PROGRESS" and inquiry.message_sent_at %}
-                            <a class="inquiry-action-button inquiry-action-template" href="/ui/inquiries/{{ inquiry.id }}/template">Szablon — wyślij ponownie</a>
-                            <form method="post" action="/ui/inquiries/{{ inquiry.id }}/status">
+                            <a class="inquiry-action-button inquiry-action-template" href="{{ ui_url(request, '/ui/inquiries/' ~ inquiry.id ~ '/template') }}">Szablon — wyślij ponownie</a>
+                            <form method="post" action="{{ ui_url(request, '/ui/inquiries/' ~ inquiry.id ~ '/status') }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <input type="hidden" name="status" value="REJECTED">
                                 <button type="submit" class="inquiry-action-button inquiry-action-reject">Odrzuć</button>
                             </form>
                         {% elif inquiry.status == "IN_PROGRESS" %}
-                            <a class="inquiry-action-button inquiry-action-template" href="/ui/inquiries/{{ inquiry.id }}/template">Szablon</a>
-                            <form method="post" action="/ui/inquiries/{{ inquiry.id }}/status">
+                            <a class="inquiry-action-button inquiry-action-template" href="{{ ui_url(request, '/ui/inquiries/' ~ inquiry.id ~ '/template') }}">Szablon</a>
+                            <form method="post" action="{{ ui_url(request, '/ui/inquiries/' ~ inquiry.id ~ '/status') }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <input type="hidden" name="status" value="CLOSED">
                                 <button type="submit" class="inquiry-action-button inquiry-action-neutral">Zamknij</button>
                             </form>
-                            <form method="post" action="/ui/inquiries/{{ inquiry.id }}/status">
+                            <form method="post" action="{{ ui_url(request, '/ui/inquiries/' ~ inquiry.id ~ '/status') }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <input type="hidden" name="status" value="REJECTED">
                                 <button type="submit" class="inquiry-action-button inquiry-action-reject">Odrzuć</button>

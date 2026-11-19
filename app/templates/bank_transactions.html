@@ -10,7 +10,7 @@
 
     <h2>Dodaj wpływ</h2>
 
-    <form method="get" action="/ui/bank-transactions" class="reservation-lookup-form">
+    <form method="get" action="{{ ui_url(request, '/ui/bank-transactions') }}" class="reservation-lookup-form">
         <label for="reservation_number">Wczytaj rezerwację Direct</label>
         <div class="reservation-lookup-controls">
             <input
@@ -46,7 +46,7 @@
         </section>
     {% endif %}
 
-    <form method="post" action="/ui/bank-transactions">
+    <form method="post" action="{{ ui_url(request, '/ui/bank-transactions') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         {% if reservation_lookup %}

@@ -41,7 +41,7 @@
                             {% else %}
                                 · cena do ręcznego ustalenia
                             {% endif %}
-                            <a href="/ui/inquiries/{{ inquiry.id }}/template?check_in={{ option.check_in }}&amp;check_out={{ option.check_out }}">Przygotuj szablon na ten termin</a>
+                            <a href="{{ ui_url(request, '/ui/inquiries/' ~ inquiry.id ~ '/template') }}?check_in={{ option.check_in }}&amp;check_out={{ option.check_out }}">Przygotuj szablon na ten termin</a>
                         </li>
                     {% endfor %}
                 </ul>
@@ -68,7 +68,7 @@
         {% else %}
             <p>Nie można automatycznie ustalić ceny dla tego miesiąca — wpisz i zweryfikuj ją ręcznie.</p>
         {% endif %}
-        <form method="get" action="/ui/inquiries/{{ inquiry.id }}/template">
+        <form method="get" action="{{ ui_url(request, '/ui/inquiries/' ~ inquiry.id ~ '/template') }}">
             <input type="hidden" name="check_in" value="{{ quote_check_in }}">
             <input type="hidden" name="check_out" value="{{ quote_check_out }}">
             <label for="cottage">Domek</label>
@@ -112,7 +112,7 @@
                 {% else %}
                     <p>Wyślij wiadomość ręcznie, a następnie potwierdź jej wysłanie. W panelu pojawi się przycisk akceptacji, który utworzy rezerwację i zablokuje termin.</p>
                 {% endif %}
-                <form method="post" action="/ui/inquiries/{{ inquiry.id }}/mark-offer-sent" class="send-inquiry-offer-form">
+                <form method="post" action="{{ ui_url(request, '/ui/inquiries/' ~ inquiry.id ~ '/mark-offer-sent') }}" class="send-inquiry-offer-form">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="cottage_id" value="{{ cottage.split(' ')[1] }}">
                     <input type="hidden" name="total_amount" value="{{ total_amount }}">
@@ -128,7 +128,7 @@
         </section>
     {% endif %}
 
-    <a class="secondary-button" href="/ui/inquiries#inquiry-{{ inquiry.id }}">Wróć do zapytań</a>
+    <a class="secondary-button" href="{{ ui_url(request, '/ui/inquiries') }}#inquiry-{{ inquiry.id }}">Wróć do zapytań</a>
 </div>
 <script>
     const totalAmount = document.getElementById("total_amount");

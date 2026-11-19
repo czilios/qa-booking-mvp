@@ -296,8 +296,14 @@ class OperatorAccessMiddleware:
             if query_string:
                 destination = f"{destination}?{query_string}"
             next_path = safe_login_redirect(destination)
+            root_path = scope.get("root_path", "").rstrip("/")
+            login_path = "/login"
+            if root_path and not (
+                login_path == root_path or login_path.startswith(f"{root_path}/")
+            ):
+                login_path = f"{root_path}{login_path}"
             response = RedirectResponse(
-                url=f"/login?{urlencode({'next': next_path})}",
+                url=f"{login_path}?{urlencode({'next': next_path})}",
                 status_code=303,
                 headers={"Cache-Control": "no-store"},
             )

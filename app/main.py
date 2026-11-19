@@ -143,6 +143,21 @@ app.mount(
 templates = Jinja2Templates(directory="app/templates")
 
 
+def get_root_path(request: Request) -> str:
+    return request.scope.get("root_path", "").rstrip("/")
+
+
+def ui_url(request: Request, path: str) -> str:
+    root_path = get_root_path(request)
+    path = "/" + path.lstrip("/")
+    if root_path and (path == root_path or path.startswith(f"{root_path}/")):
+        return path
+    return f"{root_path}{path}"
+
+
+templates.env.globals["ui_url"] = ui_url
+
+
 @pass_context
 def _template_csrf_token(context):
     request = context.get("request")
@@ -561,7 +576,7 @@ def operator_login(
         _close_auth_connection(connection, operation="login_session_create")
 
     response = RedirectResponse(
-        url=safe_login_redirect(next),
+        url=ui_url(request, safe_login_redirect(next)),
         status_code=303,
     )
     response.set_cookie(
@@ -617,7 +632,7 @@ def operator_logout(request: Request):
                 operation="logout_session_revoke",
             )
 
-    response = RedirectResponse(url="/login", status_code=303)
+    response = RedirectResponse(url=ui_url(request, "/login"), status_code=303)
     response.delete_cookie(
         key=SESSION_COOKIE_NAME,
         path="/",
@@ -1144,6 +1159,7 @@ def operator_ui(
 
 @app.post("/ui/reservations")
 def create_ui_reservation(
+    request: Request,
     cottage_id: int = Form(...),
     check_in: date = Form(...),
     check_out: date = Form(...),
@@ -1199,7 +1215,7 @@ def create_ui_reservation(
 
     return RedirectResponse(
     url=(
-        f"/ui?"
+        f"{ui_url(request, '/ui')}?"
         f"check_in={check_in}"
         f"&check_out={check_out}"
         f"&reservation_created={reservation_id}"
@@ -1209,10 +1225,11 @@ def create_ui_reservation(
 
 @app.get("/ui/reservations/search")
 def search_reservation_ui(
+    request: Request,
     reservation_id: int,
 ):
     return RedirectResponse(
-        url=f"/ui/reservations/{reservation_id}",
+        url=ui_url(request, f"/ui/reservations/{reservation_id}"),
         status_code=303,
     )
 
@@ -1250,6 +1267,7 @@ def reservation_ui(
 
 @app.post("/ui/reservations/{reservation_id}/cancel")
 def cancel_reservation_ui(
+    request: Request,
     reservation_id: int,
     db_connection=Depends(get_db_connection),
 ):
@@ -1270,7 +1288,7 @@ def cancel_reservation_ui(
         )
 
     return RedirectResponse(
-        url=f"/ui/reservations/{reservation_id}",
+        url=ui_url(request, f"/ui/reservations/{reservation_id}"),
         status_code=303,
     )
 
@@ -1441,6 +1459,7 @@ def bank_transactions_ui(
 
 @app.post("/ui/bank-transactions")
 def create_bank_transaction_ui(
+    request: Request,
     transaction_date: date = Form(...),
     source_id: int = Form(...),
     cottage_id: int | None = Form(None),
@@ -1474,7 +1493,7 @@ def create_bank_transaction_ui(
 
     return RedirectResponse(
         url=(
-            f"/ui/bank-transactions"
+            f"{ui_url(request, '/ui/bank-transactions')}"
             f"?month={transaction_date.month}"
             f"&year={transaction_date.year}"
         ),
@@ -1716,6 +1735,7 @@ def web_inquiry_template_ui(
 
 @app.post("/ui/inquiries/{inquiry_id}/mark-offer-sent")
 def mark_inquiry_offer_sent_ui(
+    request: Request,
     inquiry_id: int,
     cottage_id: int = Form(...),
     total_amount: Decimal = Form(..., gt=0),
@@ -1788,13 +1808,14 @@ def mark_inquiry_offer_sent_ui(
         raise
 
     return RedirectResponse(
-        url=f"/ui/inquiries#inquiry-{inquiry_id}",
+        url=ui_url(request, f"/ui/inquiries#inquiry-{inquiry_id}"),
         status_code=303,
     )
 
 
 @app.post("/ui/inquiries/{inquiry_id}/accept")
 def accept_web_inquiry_ui(
+    request: Request,
     inquiry_id: int,
 ):
     def accept_inquiry(connection):
@@ -1888,13 +1909,17 @@ def accept_web_inquiry_ui(
         raise
 
     return RedirectResponse(
-        url=f"/ui/inquiries?reservation_id={reservation_id}#inquiry-{inquiry_id}",
+        url=ui_url(
+            request,
+            f"/ui/inquiries?reservation_id={reservation_id}#inquiry-{inquiry_id}",
+        ),
         status_code=303,
     )
 
 
 @app.post("/ui/inquiries/{inquiry_id}/status")
 def update_web_inquiry_status_ui(
+    request: Request,
     inquiry_id: int,
     status: str = Form(...),
     db_connection=Depends(get_db_connection),
@@ -1908,7 +1933,7 @@ def update_web_inquiry_status_ui(
         status=status,
     )
     db_connection.commit()
-    redirect_url = "/ui/inquiries"
+    redirect_url = ui_url(request, "/ui/inquiries")
     if status == "IN_PROGRESS":
         redirect_url += f"#inquiry-{inquiry_id}"
     return RedirectResponse(url=redirect_url, status_code=303)

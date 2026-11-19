@@ -8,7 +8,7 @@
 <div class="container report-container accounting-report">
     <h2>Ewidencja sprzedaży</h2>
 
-    <form class="report-period-filter" method="get" action="/ui/reports/accounting">
+    <form class="report-period-filter" method="get" action="{{ ui_url(request, '/ui/reports/accounting') }}">
         <div class="form-group">
             <label for="month">Miesiąc</label>
             <select id="month" name="month" required>
@@ -42,7 +42,7 @@
         <button type="submit">POKAŻ RAPORT</button>
     </form>
 
-    <form class="report-period-filter" method="get" action="/ui/reports/accounting">
+    <form class="report-period-filter" method="get" action="{{ ui_url(request, '/ui/reports/accounting') }}">
         <h3>Zakres niestandardowy</h3>
         <div class="form-group">
             <label for="start_month">Od miesiąca</label>

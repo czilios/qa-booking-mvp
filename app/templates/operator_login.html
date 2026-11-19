@@ -18,7 +18,7 @@
 <main>
     <h1>Logowanie operatora</h1>
     {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
-    <form method="post" action="/login" autocomplete="on">
+    <form method="post" action="{{ ui_url(request, '/login') }}" autocomplete="on">
         <input type="hidden" name="next" value="{{ next }}">
         <label for="login">Login</label>
         <input id="login" name="login" type="text" autocomplete="username" required>

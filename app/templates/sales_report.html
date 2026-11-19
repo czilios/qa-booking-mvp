@@ -8,7 +8,7 @@
 <div class="container report-container">
     <h2>Raport sprzedaży</h2>
 
-    <form class="report-period-filter" method="get" action="/ui/reports/sales">
+    <form class="report-period-filter" method="get" action="{{ ui_url(request, '/ui/reports/sales') }}">
         <div class="form-group">
             <label for="month">Miesiąc sprzedaży</label>
             <select id="month" name="month" required>

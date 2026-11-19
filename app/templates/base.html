@@ -25,7 +25,7 @@
 <body>
 
 <header class="site-header">
-    <a href="/ui" class="site-logo-link" aria-label="Wrzosowo 159 — strona główna">
+    <a href="{{ ui_url(request, '/ui') }}" class="site-logo-link" aria-label="Wrzosowo 159 — strona główna">
         <img
             src="{{ url_for('static', path='images/logo.png') }}"
             alt="Wrzosowo 159"
@@ -42,11 +42,11 @@
             Rezerwacje
         </span>
 
-        <a href="/ui">
+        <a href="{{ ui_url(request, '/ui') }}">
             Dostępność
         </a>
 
-        <a href="/ui/inquiries">
+        <a href="{{ ui_url(request, '/ui/inquiries') }}">
             Zapytania WWW
         </a>
 
@@ -58,7 +58,7 @@
             Finanse
         </span>
 
-        <a href="/ui/bank-transactions">
+        <a href="{{ ui_url(request, '/ui/bank-transactions') }}">
             Dodaj wpływ
         </a>
 
@@ -70,15 +70,15 @@
             Raporty
         </span>
 
-        <a href="/ui/reports/overall">
+        <a href="{{ ui_url(request, '/ui/reports/overall') }}">
             Raport ogólny
         </a>
 
-        <a href="/ui/reports/accounting">
+        <a href="{{ ui_url(request, '/ui/reports/accounting') }}">
             Raport księgowy
         </a>
 
-        <a href="/ui/reports/sales">
+        <a href="{{ ui_url(request, '/ui/reports/sales') }}">
             Raport sprzedażowy
         </a>
 

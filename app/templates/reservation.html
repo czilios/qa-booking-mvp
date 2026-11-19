@@ -68,7 +68,7 @@
 
     <form
         method="post"
-        action="/ui/reservations/{{ reservation.id }}/cancel"
+        action="{{ ui_url(request, '/ui/reservations/' ~ reservation.id ~ '/cancel') }}"
     >
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button
