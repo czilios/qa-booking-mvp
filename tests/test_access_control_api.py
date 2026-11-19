@@ -331,9 +331,14 @@ def test_unknown_route_remains_404_and_wrong_method_remains_405():
 
     unknown = client.get("/api/not-a-real-route")
     wrong_method = client.post("/api/reservations/123")
+    prefixed_client = TestClient(main.app, root_path="/api")
+    prefixed_unknown = prefixed_client.get("/api/api/not-a-real-route")
+    prefixed_wrong_method = prefixed_client.post("/api/api/reservations/123")
 
     assert unknown.status_code == 404
     assert wrong_method.status_code == 405
+    assert prefixed_unknown.status_code == 404
+    assert prefixed_wrong_method.status_code == 405
 
 
 def test_authentication_exceptions_remain_accessible(monkeypatch):
@@ -354,6 +359,46 @@ def test_authentication_exceptions_remain_accessible(monkeypatch):
     assert login_page.status_code == 200
     assert login_attempt.status_code == 401
     main.rate_limiter.clear()
+
+
+def test_login_page_is_accessible_with_root_path(monkeypatch):
+    monkeypatch.setattr(main, "_auth_configuration", lambda request: ("hash", False))
+
+    response = TestClient(main.app, root_path="/api").get("/api/login")
+
+    assert response.status_code == 200
+    assert "Zaloguj" in response.text
+
+
+def test_login_post_is_accessible_with_root_path(monkeypatch):
+    monkeypatch.setenv("CSRF_TRUSTED_ORIGINS", "http://testserver")
+    monkeypatch.setattr(main, "_auth_configuration", lambda request: ("hash", False))
+    monkeypatch.setattr(main, "verify_operator_credentials", lambda *args: False)
+    main.rate_limiter.clear()
+
+    response = TestClient(main.app, root_path="/api").post(
+        "/api/login",
+        data={"login": "operator", "password": "invalid"},
+        headers={"Origin": "http://testserver"},
+    )
+
+    assert response.status_code == 401
+    assert "Nieprawidłowy login lub hasło." in response.text
+    assert "Authentication required." not in response.text
+    main.rate_limiter.clear()
+
+
+def test_operator_ui_stays_protected_with_root_path(monkeypatch):
+    connection_factory = Mock(side_effect=AssertionError("unexpected DB access"))
+    monkeypatch.setattr(access_control, "get_connection", connection_factory)
+
+    response = TestClient(main.app, root_path="/api").get(
+        "/api/ui", follow_redirects=False
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"].startswith("/api/login?next=")
+    connection_factory.assert_not_called()
 
 
 def test_public_endpoints_are_not_checked_for_operator_session(monkeypatch):

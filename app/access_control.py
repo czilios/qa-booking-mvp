@@ -7,6 +7,7 @@ import logging
 from typing import Sequence
 from urllib.parse import parse_qs, urlencode
 
+from starlette._utils import get_route_path
 from starlette.concurrency import run_in_threadpool
 from starlette.requests import Request
 from starlette.responses import JSONResponse, PlainTextResponse, RedirectResponse
@@ -125,7 +126,9 @@ class OperatorAccessMiddleware:
             return
 
         method = scope["method"].upper()
-        path = scope["path"]
+        # Uvicorn includes root_path in scope["path"]. Classify the same
+        # application-relative path that Starlette's router matches.
+        path = get_route_path(scope)
         if (method, path) in PRESERVED_NOT_FOUND_ROUTES:
             # These retired routes intentionally keep their existing 404 response.
             await self.app(scope, receive, send)
@@ -284,7 +287,8 @@ class OperatorAccessMiddleware:
     @staticmethod
     async def _unauthorized(scope, receive, send):
         path = scope["path"]
-        if path.startswith("/api/"):
+        route_path = get_route_path(scope)
+        if route_path.startswith("/api/"):
             response = JSONResponse(
                 {"detail": "Authentication required."},
                 status_code=401,
