@@ -93,6 +93,47 @@ def test_login_creates_db_session_and_sets_secure_cookie(monkeypatch):
     assert "secure" in csrf_cookie.lower()
 
 
+def test_authenticated_operator_panel_shows_csrf_protected_logout_form(monkeypatch):
+    _configure_auth(monkeypatch, secure="false")
+    session_connection = FakeConnection()
+    ui_connection = FakeConnection()
+    monkeypatch.setattr(access_control, "get_connection", lambda: session_connection)
+    monkeypatch.setattr(
+        access_control,
+        "authenticate_operator_session",
+        lambda connection, token: {
+            "id": 1,
+            "operator_id": "operator",
+            "csrf_token_hash": hash_csrf_token(TEST_CSRF_TOKEN),
+        },
+    )
+    monkeypatch.setattr(main, "get_connection", lambda: ui_connection)
+
+    class FakeCottageRepository:
+        def __init__(self, connection):
+            assert connection is ui_connection
+
+        def get_active_cottage_ids(self):
+            return [1]
+
+    monkeypatch.setattr(main, "CottageRepository", FakeCottageRepository)
+    client = TestClient(main.app)
+    client.cookies.set(SESSION_COOKIE_NAME, secrets.token_urlsafe(32))
+    client.cookies.set(CSRF_COOKIE_NAME, TEST_CSRF_TOKEN)
+
+    response = client.get("/ui")
+
+    assert response.status_code == 200
+    assert '<form method="post" action="/logout">' in response.text
+    assert (
+        f'<input type="hidden" name="csrf_token" value="{TEST_CSRF_TOKEN}">'
+        in response.text
+    )
+    assert "Wyloguj" in response.text
+    assert session_connection.closed
+    assert ui_connection.closed
+
+
 def test_invalid_credentials_have_the_same_generic_response(monkeypatch):
     password = _configure_auth(monkeypatch)
     client = TestClient(main.app)
