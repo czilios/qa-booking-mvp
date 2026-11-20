@@ -37,7 +37,7 @@ def test_sales_report_api_returns_report(
     set_reservation_created_at(db_connection, reservation_id, date(2031, 10, 10))
 
     response = api_client.get(
-        "/api/sales-report",
+        "/sales-report",
         params={
             "start_date": "2031-10-01",
             "end_date": "2031-11-01",
@@ -55,7 +55,7 @@ def test_sales_report_api_rejects_invalid_date_range(
     api_client,
 ):
     response = api_client.get(
-        "/api/sales-report",
+        "/sales-report",
         params={
             "start_date": "2031-11-01",
             "end_date": "2031-10-01",
@@ -99,7 +99,7 @@ def test_sales_report_api_includes_all_sources(
         )
 
     response = api_client.get(
-        "/api/sales-report",
+        "/sales-report",
         params={
             "start_date": "2031-10-01",
             "end_date": "2031-11-01",
@@ -153,7 +153,7 @@ def test_sales_report_api_returns_total_amount(
         )
 
     response = api_client.get(
-        "/api/sales-report",
+        "/sales-report",
         params={
             "start_date": "2031-10-01",
             "end_date": "2031-11-01",
@@ -215,7 +215,7 @@ def test_sales_report_api_returns_sales_by_source(
     )
 
     response = api_client.get(
-        "/api/sales-report",
+        "/sales-report",
         params={
             "start_date": "2031-10-01",
             "end_date": "2031-11-01",
@@ -268,7 +268,7 @@ def test_sales_report_api_returns_paid_amount_and_balance(
     )
 
     response = api_client.get(
-        "/api/sales-report",
+        "/sales-report",
         params={
             "start_date": "2031-10-01",
             "end_date": "2031-11-01",
@@ -316,7 +316,7 @@ def test_sales_report_api_excludes_cancelled_reservation(
     )
 
     response = api_client.get(
-        "/api/sales-report",
+        "/sales-report",
         params={
             "start_date": "2031-10-01",
             "end_date": "2031-11-01",
@@ -358,7 +358,7 @@ def test_sales_report_api_excludes_reservation_outside_date_range(
     set_reservation_created_at(db_connection, reservation_id, date(2031, 11, 5))
 
     response = api_client.get(
-        "/api/sales-report",
+        "/sales-report",
         params={
             "start_date": "2031-10-01",
             "end_date": "2031-11-01",
@@ -401,7 +401,7 @@ def test_sales_report_api_includes_invoice_number(
     set_reservation_created_at(db_connection, reservation_id, date(2032, 10, 10))
 
     response = api_client.get(
-        "/api/sales-report",
+        "/sales-report",
         params={
             "start_date": "2032-10-01",
             "end_date": "2032-11-01",

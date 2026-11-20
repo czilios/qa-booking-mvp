@@ -34,8 +34,23 @@ class AccessCategory(str, Enum):
 
 
 PUBLIC_ROUTES = {
-    ("GET", "/api/availability"),
-    ("POST", "/api/inquiries"),
+    ("GET", "/availability"),
+    ("POST", "/inquiries"),
+}
+API_ROUTE_PATHS = {
+    "/availability",
+    "/inquiries",
+    "/reservations",
+    "/reservations/{reservation_id}",
+    "/payments",
+    "/payments/report",
+    "/payments/{payment_id}",
+    "/payments/{payment_id}/paid",
+    "/customers",
+    "/customers/{customer_id}",
+    "/bank-statement-report",
+    "/overall-report",
+    "/sales-report",
 }
 AUTH_EXCEPTION_ROUTES = {
     ("GET", "/login"),
@@ -142,6 +157,7 @@ class OperatorAccessMiddleware:
             return
 
         category = classify_access(path, method)
+        is_api_route = getattr(route, "path", None) in API_ROUTE_PATHS
         is_logout = method == "POST" and path == "/logout"
         if category is not AccessCategory.OPERATOR_ONLY and not is_logout:
             await self.app(scope, receive, send)
@@ -150,7 +166,7 @@ class OperatorAccessMiddleware:
         request = Request(scope, receive=receive)
         token = request.cookies.get(SESSION_COOKIE_NAME)
         if not token:
-            await self._unauthorized(scope, receive, send)
+            await self._unauthorized(scope, receive, send, is_api=is_api_route)
             return
 
         csrf_cookie = request.cookies.get(CSRF_COOKIE_NAME)
@@ -160,7 +176,7 @@ class OperatorAccessMiddleware:
                 token,
             )
         except Exception:
-            if path.startswith("/api/"):
+            if is_api_route:
                 response = JSONResponse(
                     {"detail": "Authentication service is unavailable."},
                     status_code=503,
@@ -178,7 +194,7 @@ class OperatorAccessMiddleware:
         if session is None or not session.get("csrf_token_hash"):
             # Sessions created before the CSRF migration cannot authenticate
             # state-changing requests; require a fresh login to initialize one.
-            await self._unauthorized(scope, receive, send)
+            await self._unauthorized(scope, receive, send, is_api=is_api_route)
             return
 
         csrf_token = (
@@ -188,7 +204,7 @@ class OperatorAccessMiddleware:
         )
         replay_receive = receive
         if method in {"POST", "PUT", "PATCH", "DELETE"}:
-            if path.startswith("/api/"):
+            if is_api_route:
                 supplied_csrf_token = request.headers.get("x-csrf-token")
             else:
                 supplied_csrf_token, replay_receive = await self._form_csrf_token(
@@ -203,7 +219,7 @@ class OperatorAccessMiddleware:
                     {"detail": "CSRF token is missing or invalid."},
                     status_code=403,
                     headers={"Cache-Control": "no-store"},
-                ) if path.startswith("/api/") else PlainTextResponse(
+                ) if is_api_route else PlainTextResponse(
                     "CSRF token is missing or invalid.",
                     status_code=403,
                     headers={"Cache-Control": "no-store"},
@@ -285,10 +301,9 @@ class OperatorAccessMiddleware:
                     )
 
     @staticmethod
-    async def _unauthorized(scope, receive, send):
+    async def _unauthorized(scope, receive, send, *, is_api: bool):
         path = scope["path"]
-        route_path = get_route_path(scope)
-        if route_path.startswith("/api/"):
+        if is_api:
             response = JSONResponse(
                 {"detail": "Authentication required."},
                 status_code=401,

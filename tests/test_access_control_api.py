@@ -6,7 +6,7 @@ from fastapi.routing import APIRoute
 import pytest
 
 from app import access_control, main
-from app.access_control import OperatorAccessMiddleware
+from app.access_control import API_ROUTE_PATHS, OperatorAccessMiddleware
 from app.auth import CSRF_COOKIE_NAME, SESSION_COOKIE_NAME, hash_csrf_token
 
 
@@ -37,8 +37,8 @@ class FakeConnection:
 def _operator_test_app():
     application = FastAPI()
 
-    @application.get("/api/private")
-    def private_api(request: Request):
+    @application.get("/customers/{customer_id}")
+    def private_api(request: Request, customer_id: int):
         return {"operator_id": request.state.operator["operator_id"]}
 
     @application.get("/ui/private")
@@ -56,7 +56,18 @@ def test_anonymous_api_gets_json_401_without_database_access(monkeypatch):
     connection_factory = Mock(side_effect=AssertionError("unexpected DB access"))
     monkeypatch.setattr(access_control, "get_connection", connection_factory)
 
-    response = TestClient(main.app).get("/api/reservations/123")
+    response = TestClient(main.app).get("/reservations/123")
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Authentication required."}
+    connection_factory.assert_not_called()
+
+
+def test_anonymous_api_gets_json_401_with_root_path_without_database_access(monkeypatch):
+    connection_factory = Mock(side_effect=AssertionError("unexpected DB access"))
+    monkeypatch.setattr(access_control, "get_connection", connection_factory)
+
+    response = TestClient(main.app, root_path="/api").get("/api/reservations/123")
 
     assert response.status_code == 401
     assert response.json() == {"detail": "Authentication required."}
@@ -66,10 +77,10 @@ def test_anonymous_api_gets_json_401_without_database_access(monkeypatch):
 @pytest.mark.parametrize(
     ("method", "path", "kwargs"),
     [
-        ("GET", "/api/customers/123", {}),
+        ("GET", "/customers/123", {}),
         (
             "POST",
-            "/api/customers",
+            "/customers",
             {"json": {"first_name": "Test", "last_name": "Operator"}},
         ),
     ],
@@ -90,14 +101,29 @@ def test_anonymous_requests_to_operational_api_routes_get_json_401(
 
 def test_every_registered_operational_api_route_is_operator_only():
     public_routes = {
-        ("GET", "/api/availability"),
-        ("POST", "/api/inquiries"),
+        ("GET", "/availability"),
+        ("POST", "/inquiries"),
     }
+
+    registered_api_paths = {
+        route.path
+        for route in main.app.router.routes
+        if isinstance(route, APIRoute)
+        and route.path not in {"/", "/health", "/login", "/logout"}
+        and not route.path.startswith("/ui")
+        and route.path not in {
+            "/docs",
+            "/docs/oauth2-redirect",
+            "/openapi.json",
+            "/redoc",
+        }
+    }
+    assert registered_api_paths == API_ROUTE_PATHS
 
     api_routes = [
         route
         for route in main.app.router.routes
-        if isinstance(route, APIRoute) and route.path.startswith("/api/")
+        if isinstance(route, APIRoute) and route.path in API_ROUTE_PATHS
     ]
 
     assert api_routes
@@ -149,7 +175,7 @@ def test_valid_operator_session_reaches_actual_api_endpoint(monkeypatch):
     _set_operator_cookies(client)
 
     try:
-        response = client.get("/api/customers/123")
+        response = client.get("/customers/123")
     finally:
         main.app.dependency_overrides.pop(main.get_db_connection, None)
 
@@ -182,7 +208,13 @@ def test_anonymous_operator_ui_routes_redirect_to_login(path, monkeypatch):
     connection_factory.assert_not_called()
 
 
-def test_valid_session_allows_actual_operator_ui_view(monkeypatch):
+@pytest.mark.parametrize(
+    ("root_path", "ui_path", "url_prefix"),
+    [("", "/ui", ""), ("/api", "/api/ui", "/api")],
+)
+def test_valid_session_allows_actual_operator_ui_view(
+    monkeypatch, root_path, ui_path, url_prefix
+):
     session_connection = FakeConnection()
     ui_connection = FakeConnection()
     monkeypatch.setattr(access_control, "get_connection", lambda: session_connection)
@@ -205,13 +237,15 @@ def test_valid_session_allows_actual_operator_ui_view(monkeypatch):
             return [1]
 
     monkeypatch.setattr(main, "CottageRepository", FakeCottageRepository)
-    client = TestClient(main.app)
+    client = TestClient(main.app, root_path=root_path)
     _set_operator_cookies(client)
 
-    response = client.get("/ui")
+    response = client.get(ui_path)
 
     assert response.status_code == 200
     assert "Dostępność" in response.text
+    assert f'href="{url_prefix}/ui"' in response.text
+    assert f'action="{url_prefix}/logout"' in response.text
     assert session_connection.commits == 1
     assert session_connection.closed
     assert ui_connection.closed
@@ -260,7 +294,7 @@ def test_valid_session_allows_operator_api_and_ui(monkeypatch):
     client = TestClient(_operator_test_app())
     _set_operator_cookies(client)
 
-    api_response = client.get("/api/private")
+    api_response = client.get("/customers/123")
     ui_response = client.get("/ui/private")
 
     assert api_response.status_code == 200
@@ -282,7 +316,7 @@ def test_invalid_session_is_denied_for_api_and_ui(monkeypatch):
     client = TestClient(_operator_test_app())
     _set_operator_cookies(client, "expired-session-token")
 
-    api_response = client.get("/api/private")
+    api_response = client.get("/customers/123")
     ui_response = client.get("/ui/private", follow_redirects=False)
 
     assert api_response.status_code == 401
@@ -301,7 +335,7 @@ def test_session_verification_database_error_fails_closed(monkeypatch):
     client = TestClient(main.app)
     _set_operator_cookies(client, "session-token")
 
-    response = client.get("/api/reservations/123")
+    response = client.get("/reservations/123")
 
     assert response.status_code == 503
     assert "database detail" not in response.text
@@ -318,7 +352,7 @@ def test_session_authenticator_error_rolls_back_and_fails_closed(monkeypatch):
     client = TestClient(main.app)
     _set_operator_cookies(client, "session-token")
 
-    response = client.get("/api/reservations/123")
+    response = client.get("/reservations/123")
 
     assert response.status_code == 503
     assert "session verification detail" not in response.text
@@ -329,11 +363,11 @@ def test_session_authenticator_error_rolls_back_and_fails_closed(monkeypatch):
 def test_unknown_route_remains_404_and_wrong_method_remains_405():
     client = TestClient(main.app)
 
-    unknown = client.get("/api/not-a-real-route")
-    wrong_method = client.post("/api/reservations/123")
+    unknown = client.get("/not-a-real-route")
+    wrong_method = client.post("/reservations/123")
     prefixed_client = TestClient(main.app, root_path="/api")
-    prefixed_unknown = prefixed_client.get("/api/api/not-a-real-route")
-    prefixed_wrong_method = prefixed_client.post("/api/api/reservations/123")
+    prefixed_unknown = prefixed_client.get("/api/not-a-real-route")
+    prefixed_wrong_method = prefixed_client.post("/api/reservations/123")
 
     assert unknown.status_code == 404
     assert wrong_method.status_code == 405
@@ -368,6 +402,7 @@ def test_login_page_is_accessible_with_root_path(monkeypatch):
 
     assert response.status_code == 200
     assert "Zaloguj" in response.text
+    assert 'action="/api/login"' in response.text
 
 
 def test_login_post_is_accessible_with_root_path(monkeypatch):
@@ -431,31 +466,51 @@ def test_public_endpoints_are_not_checked_for_operator_session(monkeypatch):
 
     monkeypatch.setattr(main, "WebInquiryRepository", FakeInquiryRepository)
     main.rate_limiter.clear()
-    client = TestClient(main.app)
+    clients = [
+        (TestClient(main.app), ""),
+        (TestClient(main.app, root_path="/api"), "/api"),
+    ]
+    for client, prefix in clients:
+        availability = client.get(
+            f"{prefix}/availability",
+            params={"check_in": "2050-07-10", "check_out": "2050-07-17"},
+        )
+        inquiry = client.post(
+            f"{prefix}/inquiries",
+            json={
+                "full_name": "Test Operator Policy",
+                "phone": "+48600999111",
+                "email": "policy@example.com",
+                "check_in": "2050-07-10",
+                "check_out": "2050-07-17",
+                "guests_count": 2,
+                "consent": True,
+            },
+        )
 
-    availability = client.get(
-        "/api/availability",
-        params={"check_in": "2050-07-10", "check_out": "2050-07-17"},
-    )
-    inquiry = client.post(
-        "/api/inquiries",
-        json={
-            "full_name": "Test Operator Policy",
-            "phone": "+48600999111",
-            "email": "policy@example.com",
-            "check_in": "2050-07-10",
-            "check_out": "2050-07-17",
-            "guests_count": 2,
-            "consent": True,
-        },
-    )
-
-    assert availability.status_code == 200
-    assert inquiry.status_code == 201
-    assert inquiry.json()["id"] == 77
+        assert availability.status_code == 200
+        assert inquiry.status_code == 201
+        assert inquiry.json()["id"] == 77
     access_control.get_connection.assert_not_called()
-    assert connection.commits == 1
+    assert connection.commits == 2
     main.rate_limiter.clear()
+
+
+def test_openapi_uses_relative_paths_and_root_path_server():
+    local_schema = TestClient(main.app).get("/openapi.json").json()
+    prefixed_client = TestClient(main.app, root_path="/api")
+    prefixed_schema = prefixed_client.get("/api/openapi.json").json()
+
+    assert "/availability" in local_schema["paths"]
+    assert "/api/availability" not in local_schema["paths"]
+    assert "servers" not in local_schema or local_schema["servers"] == []
+    assert "/availability" in prefixed_schema["paths"]
+    assert "/api/availability" not in prefixed_schema["paths"]
+    assert prefixed_schema["servers"] == [{"url": "/api"}]
+
+    docs = prefixed_client.get("/api/docs")
+    assert docs.status_code == 200
+    assert "/api/openapi.json" in docs.text
 
 
 def test_root_health_and_cors_preflight_are_technical(monkeypatch):
@@ -470,7 +525,7 @@ def test_root_health_and_cors_preflight_are_technical(monkeypatch):
     health = client.get("/health")
     static = client.get("/static/styles.css")
     preflight = client.options(
-        "/api/reservations/123",
+        "/reservations/123",
         headers={
             "Origin": main.cors_origins[0],
             "Access-Control-Request-Method": "PUT",

@@ -20,7 +20,7 @@ def test_create_payment_returns_201(
     )
 
     response = api_client.post(
-        "/api/payments",
+        "/payments",
         json={
             "reservation_id": reservation_id,
             "payment_type": "DEPOSIT",
@@ -45,7 +45,7 @@ def test_create_payment_returns_404_for_nonexistent_reservation(
     api_client,
 ):
     response = api_client.post(
-        "/api/payments",
+        "/payments",
         json={
             "reservation_id": 999999,
             "payment_type": "DEPOSIT",
@@ -71,7 +71,7 @@ def test_create_payment_returns_409_for_invalid_payment_type(
     )
 
     response = api_client.post(
-        "/api/payments",
+        "/payments",
         json={
             "reservation_id": reservation_id,
             "payment_type": "INVALID",
@@ -97,7 +97,7 @@ def test_create_payment_returns_409_for_zero_amount(
     )
 
     response = api_client.post(
-        "/api/payments",
+        "/payments",
         json={
             "reservation_id": reservation_id,
             "payment_type": "DEPOSIT",
@@ -125,7 +125,7 @@ def test_create_payment_returns_409_for_negative_amount(
     )
 
     response = api_client.post(
-        "/api/payments",
+        "/payments",
         json={
             "reservation_id": reservation_id,
             "payment_type": "DEPOSIT",
@@ -160,7 +160,7 @@ def test_get_payment_returns_200(
     )
 
     response = api_client.get(
-        f"/api/payments/{payment_id}",
+        f"/payments/{payment_id}",
     )
 
     assert response.status_code == 200
@@ -178,7 +178,7 @@ def test_get_payment_returns_404_for_nonexistent_payment(
     api_client,
 ):
     response = api_client.get(
-        "/api/payments/999999",
+        "/payments/999999",
     )
 
     assert response.status_code == 404
@@ -208,7 +208,7 @@ def test_mark_payment_as_paid_returns_200(
     paid_at = datetime(2027, 11, 1, 14, 30, 0)
 
     response = api_client.put(
-        f"/api/payments/{payment_id}/paid",
+        f"/payments/{payment_id}/paid",
         json={
             "paid_at": paid_at.isoformat(),
         },
@@ -227,7 +227,7 @@ def test_mark_payment_as_paid_returns_404_for_nonexistent_payment(
     paid_at = datetime(2027, 11, 1, 14, 30, 0)
 
     response = api_client.put(
-        "/api/payments/999999/paid",
+        "/payments/999999/paid",
         json={
             "paid_at": paid_at.isoformat(),
         },
@@ -265,7 +265,7 @@ def test_mark_payment_as_paid_returns_409_for_already_paid_payment(
     )
 
     response = api_client.put(
-        f"/api/payments/{payment_id}/paid",
+        f"/payments/{payment_id}/paid",
         json={
             "paid_at": paid_at.isoformat(),
         },
@@ -304,7 +304,7 @@ def test_get_payment_report_returns_200(
     )
 
     response = api_client.get(
-        "/api/payments/report",
+        "/payments/report",
         params={
             "start_date": "2028-03-01",
             "end_date": "2028-04-01",

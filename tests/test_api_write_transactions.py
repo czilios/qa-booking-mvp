@@ -82,13 +82,13 @@ def test_api_write_dependency_rolls_back_if_commit_raises(monkeypatch):
 @pytest.mark.parametrize(
     "path, method",
     [
-        ("/api/reservations", "POST"),
-        ("/api/reservations/{reservation_id}", "PUT"),
-        ("/api/reservations/{reservation_id}", "DELETE"),
-        ("/api/payments", "POST"),
-        ("/api/payments/{payment_id}/paid", "PUT"),
-        ("/api/customers", "POST"),
-        ("/api/customers/{customer_id}", "PUT"),
+        ("/reservations", "POST"),
+        ("/reservations/{reservation_id}", "PUT"),
+        ("/reservations/{reservation_id}", "DELETE"),
+        ("/payments", "POST"),
+        ("/payments/{payment_id}/paid", "PUT"),
+        ("/customers", "POST"),
+        ("/customers/{customer_id}", "PUT"),
     ],
 )
 def test_crud_write_routes_use_transaction_dependency(path, method):
@@ -106,8 +106,8 @@ def test_crud_write_routes_use_transaction_dependency(path, method):
         if dependency.call is main.get_api_write_connection
     ]
     if (path, method) in {
-        ("/api/reservations", "POST"),
-        ("/api/reservations/{reservation_id}", "PUT"),
+        ("/reservations", "POST"),
+        ("/reservations/{reservation_id}", "PUT"),
     }:
         assert write_dependencies == []
     else:
@@ -168,7 +168,7 @@ def test_write_dependency_commits_before_http_response_starts(
     client.cookies.set(CSRF_COOKIE_NAME, TEST_CSRF_TOKEN)
     client.headers["X-CSRF-Token"] = TEST_CSRF_TOKEN
     response = client.post(
-        "/api/reservations",
+        "/reservations",
         json={
             "cottage_id": 1,
             "source_id": 1,
@@ -208,7 +208,7 @@ def test_http_exception_after_write_rolls_back_without_commit(
     client.cookies.set(CSRF_COOKIE_NAME, TEST_CSRF_TOKEN)
     client.headers["X-CSRF-Token"] = TEST_CSRF_TOKEN
     response = client.post(
-        "/api/reservations",
+        "/reservations",
         json={
             "cottage_id": 1,
             "source_id": 1,
@@ -228,7 +228,7 @@ def test_http_exception_after_write_rolls_back_without_commit(
     [
         (
             "post",
-            "/api/reservations",
+            "/reservations",
             {
                 "json": {
                     "cottage_id": 1,
@@ -241,7 +241,7 @@ def test_http_exception_after_write_rolls_back_without_commit(
         ),
         (
             "put",
-            "/api/reservations/123",
+            "/reservations/123",
             {
                 "json": {
                     "cottage_id": 1,

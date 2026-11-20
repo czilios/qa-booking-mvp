@@ -7,7 +7,7 @@ from app.main import app, get_db_connection
 
 def test_get_availability_returns_200(api_client):
     response = api_client.get(
-        "/api/availability",
+        "/availability",
         params={
             "check_in": "2027-07-10",
             "check_out": "2027-07-17",
@@ -38,7 +38,7 @@ def test_get_availability_excludes_reserved_cottage(
     )
 
     response = api_client.get(
-        "/api/availability",
+        "/availability",
         params={
             "check_in": "2027-07-10",
             "check_out": "2027-07-17",
@@ -54,7 +54,7 @@ def test_get_availability_excludes_reserved_cottage(
 
 def test_get_availability_rejects_invalid_check_out(api_client):
     response = api_client.get(
-        "/api/availability",
+        "/availability",
         params={
             "check_in": "2027-07-10",
             "check_out": "banana",
@@ -65,7 +65,7 @@ def test_get_availability_rejects_invalid_check_out(api_client):
 
 def test_get_availability_rejects_missing_check_out(api_client):
     response = api_client.get(
-        "/api/availability",
+        "/availability",
         params={
             "check_in": "2027-07-10",
         },
@@ -79,7 +79,7 @@ def test_get_availability_rejects_missing_check_out(api_client):
 
 def test_get_availability_rejects_invalid_date_range(api_client):
     response = api_client.get(
-        "/api/availability",
+        "/availability",
         params={
             "check_in": "2027-07-17",
             "check_out": "2027-07-10",
@@ -92,7 +92,7 @@ def test_get_availability_rejects_same_check_in_and_check_out(
     api_client,
 ):
     response = api_client.get(
-        "/api/availability",
+        "/availability",
         params={
             "check_in": "2027-07-17",
             "check_out": "2027-07-17",
@@ -125,7 +125,7 @@ def test_get_availability_excludes_blocked_cottage(
         )
 
     response = api_client.get(
-        "/api/availability",
+        "/availability",
         params={
             "check_in": "2027-07-10",
             "check_out": "2027-07-17",

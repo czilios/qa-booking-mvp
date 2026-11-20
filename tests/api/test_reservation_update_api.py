@@ -18,7 +18,7 @@ def test_update_reservation_returns_200(
     )
 
     response = api_client.put(
-        f"/api/reservations/{reservation_id}",
+        f"/reservations/{reservation_id}",
         json={
             "cottage_id": 2,
             "source_id": 1,
@@ -52,7 +52,7 @@ def test_update_reservation_rejects_conflicting_cottage(
     )
 
     response = api_client.put(
-        f"/api/reservations/{reservation_id}",
+        f"/reservations/{reservation_id}",
         json={
             "cottage_id": 2,
             "source_id": 1,
@@ -67,7 +67,7 @@ def test_update_reservation_returns_404_for_nonexistent_reservation(
     api_client,
 ):
     response = api_client.put(
-        "/api/reservations/999999",
+        "/reservations/999999",
         json={
             "cottage_id": 1,
             "source_id": 1,
@@ -83,7 +83,7 @@ def test_update_reservation_rejects_negative_guests(
     api_client,
 ):
     response = api_client.put(
-        "/api/reservations/1",
+        "/reservations/1",
         json={
             "cottage_id": 1,
             "source_id": 1,
@@ -109,7 +109,7 @@ def test_update_reservation_rejects_too_many_guests(
     )
 
     response = api_client.put(
-        f"/api/reservations/{reservation_id}",
+        f"/reservations/{reservation_id}",
         json={
             "cottage_id": 1,
             "source_id": 1,
@@ -135,7 +135,7 @@ def test_update_reservation_rejects_invalid_dates(
     )
 
     response = api_client.put(
-        f"/api/reservations/{reservation_id}",
+        f"/reservations/{reservation_id}",
         json={
             "cottage_id": 1,
             "source_id": 1,
@@ -161,7 +161,7 @@ def test_update_reservation_keeps_same_cottage_and_dates(
     )
 
     response = api_client.put(
-        f"/api/reservations/{reservation_id}",
+        f"/reservations/{reservation_id}",
         json={
             "cottage_id": 1,
             "source_id": 1,

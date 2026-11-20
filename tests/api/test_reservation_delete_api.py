@@ -20,7 +20,7 @@ def test_cancel_reservation_returns_204(
     )
 
     response = api_client.delete(
-        f"/api/reservations/{reservation_id}"
+        f"/reservations/{reservation_id}"
     )
 
     assert response.status_code == 204
@@ -35,7 +35,7 @@ def test_cancel_reservation_returns_404_for_nonexistent_reservation(
     api_client,
 ):
     response = api_client.delete(
-        "/api/reservations/999999"
+        "/reservations/999999"
     )
 
     assert response.status_code == 404
@@ -54,13 +54,13 @@ def test_cancelled_reservation_does_not_block_cottage(
     )
 
     response = api_client.delete(
-        f"/api/reservations/{reservation_id}"
+        f"/reservations/{reservation_id}"
     )
 
     assert response.status_code == 204
 
     availability_response = api_client.get(
-        "/api/availability",
+        "/availability",
         params={
             "check_in": "2027-09-10",
             "check_out": "2027-09-17",
@@ -88,13 +88,13 @@ def test_cancel_already_cancelled_reservation_returns_409(
     )
 
     first_response = api_client.delete(
-        f"/api/reservations/{reservation_id}"
+        f"/reservations/{reservation_id}"
     )
 
     assert first_response.status_code == 204
 
     second_response = api_client.delete(
-        f"/api/reservations/{reservation_id}"
+        f"/reservations/{reservation_id}"
     )
 
     assert second_response.status_code == 409
@@ -118,7 +118,7 @@ def test_cancel_reservation_returns_204(
     db_connection.commit()
 
     response = api_client.delete(
-        f"/api/reservations/{reservation_id}"
+        f"/reservations/{reservation_id}"
     )
 
     assert response.status_code == 204
@@ -151,7 +151,7 @@ def test_cancelled_reservation_makes_cottage_available(
     db_connection.commit()
 
     response = api_client.get(
-        "/api/availability",
+        "/availability",
         params={
             "check_in": "2092-08-10",
             "check_out": "2092-08-17",
@@ -164,7 +164,7 @@ def test_cancelled_reservation_makes_cottage_available(
 
     assert 1 not in body["cottages"]
     response = api_client.delete(
-        f"/api/reservations/{reservation_id}"
+        f"/reservations/{reservation_id}"
     )
 
     assert response.status_code == 204
@@ -181,7 +181,7 @@ def test_cancelled_reservation_makes_cottage_available(
     
 
     response = api_client.get(
-        "/api/availability",
+        "/availability",
         params={
             "check_in": "2092-08-10",
             "check_out": "2092-08-17",
@@ -198,7 +198,7 @@ def test_cancel_nonexistent_reservation_returns_404(
     api_client,
 ):
     response = api_client.delete(
-        "/api/reservations/999999999"
+        "/reservations/999999999"
     )
 
     assert response.status_code == 404
@@ -222,13 +222,13 @@ def test_cancel_already_cancelled_reservation_returns_error(
     db_connection.commit()
 
     first_response = api_client.delete(
-        f"/api/reservations/{reservation_id}"
+        f"/reservations/{reservation_id}"
     )
 
     assert first_response.status_code == 204
 
     second_response = api_client.delete(
-        f"/api/reservations/{reservation_id}"
+        f"/reservations/{reservation_id}"
     )
 
     print(second_response.status_code, second_response.text)

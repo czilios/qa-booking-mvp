@@ -35,7 +35,7 @@ def test_web_inquiry_is_saved_without_creating_a_reservation(
         reservation_count_before = cursor.fetchone()["count"]
 
     response = api_client.post(
-        "/api/inquiries",
+        "/inquiries",
         json={
             "full_name": "Jan Kowalski",
             "phone": "+48600100200",
@@ -93,7 +93,7 @@ def test_web_inquiry_rate_limit_returns_429_after_five_requests(
     }
 
     responses = [
-        api_client.post("/api/inquiries", json=payload)
+        api_client.post("/inquiries", json=payload)
         for _ in range(6)
     ]
 
@@ -110,7 +110,7 @@ def test_operator_can_mark_web_inquiry_in_progress(
     created_web_inquiry_cleanup,
 ):
     response = api_client.post(
-        "/api/inquiries",
+        "/inquiries",
         json={
             "full_name": "Jan Kowalski",
             "phone": "+48600100200",
@@ -182,7 +182,7 @@ def test_operator_sending_offer_creates_pending_reservation_and_blocks_cottage(
     created_web_inquiry_cleanup,
 ):
     inquiry_response = api_client.post(
-        "/api/inquiries",
+        "/inquiries",
         json={
             "full_name": "Anna Nowak",
             "phone": "+48600100300",
@@ -293,7 +293,7 @@ def test_operator_sending_offer_creates_pending_reservation_and_blocks_cottage(
     assert duplicate_response.status_code == 409
 
     availability_response = api_client.get(
-        "/api/availability",
+        "/availability",
         params={
             "check_in": "2050-07-10",
             "check_out": "2050-07-17",
@@ -303,7 +303,7 @@ def test_operator_sending_offer_creates_pending_reservation_and_blocks_cottage(
     assert cottage_id not in availability_response.json()["cottages"]
 
     second_inquiry = api_client.post(
-        "/api/inquiries",
+        "/inquiries",
         json={
             "full_name": "Karol Nowy",
             "phone": "+48600100400",
@@ -324,7 +324,7 @@ def test_operator_sending_offer_creates_pending_reservation_and_blocks_cottage(
             (reservation_id,),
         )
     expired_availability = api_client.get(
-        "/api/availability",
+        "/availability",
         params={
             "check_in": "2050-07-10",
             "check_out": "2050-07-17",
@@ -337,7 +337,7 @@ def test_operator_sending_offer_creates_pending_reservation_and_blocks_cottage(
         assert cursor.fetchone()["status"] == "PENDING"
 
     pending_inquiry = api_client.post(
-        "/api/inquiries",
+        "/inquiries",
         json={
             "full_name": "Spóźniona rezerwacja",
             "phone": "+48600999888",
@@ -369,7 +369,7 @@ def test_honeypot_submission_is_acknowledged_without_being_saved(
         inquiry_count_before = cursor.fetchone()["count"]
 
     response = api_client.post(
-        "/api/inquiries",
+        "/inquiries",
         json={
             "full_name": "Bot Example",
             "phone": "+48600100200",
@@ -392,7 +392,7 @@ def test_honeypot_submission_is_acknowledged_without_being_saved(
 
 def test_availability_can_filter_by_guest_capacity(api_client):
     response = api_client.get(
-        "/api/availability",
+        "/availability",
         params={
             "check_in": "2027-07-10",
             "check_out": "2027-07-17",
@@ -410,7 +410,7 @@ def test_inquiry_is_kept_when_no_cottage_can_fit_party(
     created_web_inquiry_cleanup,
 ):
     response = api_client.post(
-        "/api/inquiries",
+        "/inquiries",
         json={
             "full_name": "Anna Nowak",
             "phone": "+48600100201",
@@ -445,7 +445,7 @@ def test_inquiry_distinguishes_property_and_preferred_cottage_availability(
     created_reservation_cleanup["reservation_ids"].append(reservation_id)
 
     response = api_client.post(
-        "/api/inquiries",
+        "/inquiries",
         json={
             "full_name": "Jan Kowalski",
             "phone": "+48600100200",
@@ -511,7 +511,7 @@ def test_template_suggests_nearby_dates_when_all_cottages_are_booked(
         created_reservation_cleanup["reservation_ids"].append(reservation_id)
 
     response = api_client.post(
-        "/api/inquiries",
+        "/inquiries",
         json={
             "full_name": "Jan Kowalski",
             "phone": "+48600100200",
@@ -539,7 +539,7 @@ def test_template_suggests_nearby_dates_when_all_cottages_are_booked(
 def test_availability_rate_limit_returns_429_after_thirty_requests(api_client):
     responses = [
         api_client.get(
-            "/api/availability",
+            "/availability",
             params={
                 "check_in": "2027-07-10",
                 "check_out": "2027-07-17",
@@ -554,7 +554,7 @@ def test_availability_rate_limit_returns_429_after_thirty_requests(api_client):
 
 def test_local_website_origin_can_call_inquiry_api(api_client):
     response = api_client.options(
-        "/api/inquiries",
+        "/inquiries",
         headers={
             "Origin": "http://127.0.0.1:5500",
             "Access-Control-Request-Method": "POST",

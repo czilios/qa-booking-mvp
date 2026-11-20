@@ -64,7 +64,7 @@ def test_customer_api_accepts_one_contact(
     monkeypatch.setattr(main, "CustomerRepository", lambda db: repository)
 
     response = _authenticated_client(valid_operator_session_cookie).post(
-        "/api/customers", json={"first_name": "Jan", "last_name": "Kowalski", **contact}
+        "/customers", json={"first_name": "Jan", "last_name": "Kowalski", **contact}
     )
 
     assert response.status_code == 201
@@ -79,7 +79,7 @@ def test_customer_api_rejects_missing_or_whitespace_contacts(
     connection = Mock()
     monkeypatch.setattr(main, "get_connection", lambda: connection)
     response = _authenticated_client(valid_operator_session_cookie).post(
-        "/api/customers",
+        "/customers",
         json={"first_name": "Jan", "last_name": "Kowalski", "phone": contact, "email": contact},
     )
     assert response.status_code == 400
@@ -94,7 +94,7 @@ def test_customer_api_rejects_missing_or_blank_names(
     connection = Mock()
     monkeypatch.setattr(main, "get_connection", lambda: connection)
     response = _authenticated_client(valid_operator_session_cookie).post(
-        "/api/customers", json={**payload, "email": "guest@example.com"}
+        "/customers", json={**payload, "email": "guest@example.com"}
     )
     assert response.status_code in (400, 422)
     connection.commit.assert_not_called()
@@ -110,7 +110,7 @@ def test_customer_api_update_accepts_email_only(
     monkeypatch.setattr("app.customer_service.CustomerRepository", lambda db: repository)
 
     response = _authenticated_client(valid_operator_session_cookie).put(
-        "/api/customers/5", json={"first_name": "Jan", "last_name": "Kowalski", "email": "guest@example.com"}
+        "/customers/5", json={"first_name": "Jan", "last_name": "Kowalski", "email": "guest@example.com"}
     )
     assert response.status_code == 200
     connection.commit.assert_called_once()

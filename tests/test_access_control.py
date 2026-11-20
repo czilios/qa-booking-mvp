@@ -6,8 +6,8 @@ from app.access_control import AccessCategory, api_docs_enabled, classify_access
 @pytest.mark.parametrize(
     ("method", "path", "expected"),
     [
-        ("GET", "/api/availability", AccessCategory.PUBLIC),
-        ("POST", "/api/inquiries", AccessCategory.PUBLIC),
+        ("GET", "/availability", AccessCategory.PUBLIC),
+        ("POST", "/inquiries", AccessCategory.PUBLIC),
         ("GET", "/login", AccessCategory.AUTH_EXCEPTION),
         ("POST", "/login", AccessCategory.AUTH_EXCEPTION),
         ("POST", "/logout", AccessCategory.AUTH_EXCEPTION),
@@ -18,7 +18,7 @@ from app.access_control import AccessCategory, api_docs_enabled, classify_access
         ("GET", "/docs/oauth2-redirect", AccessCategory.TECHNICAL),
         ("GET", "/redoc", AccessCategory.TECHNICAL),
         ("GET", "/openapi.json", AccessCategory.TECHNICAL),
-        ("GET", "/api/reservations/123", AccessCategory.OPERATOR_ONLY),
+        ("GET", "/reservations/123", AccessCategory.OPERATOR_ONLY),
         ("POST", "/ui/reservations", AccessCategory.OPERATOR_ONLY),
     ],
 )

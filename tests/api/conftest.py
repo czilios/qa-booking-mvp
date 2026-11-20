@@ -39,7 +39,11 @@ def api_client(db_connection, monkeypatch, valid_operator_session_cookie):
         method = method.upper()
         path = str(url).split("?", 1)[0]
         if method in {"POST", "PUT", "PATCH", "DELETE"}:
-            if path.startswith("/api/") and path != "/api/inquiries":
+            if (
+                path != "/inquiries"
+                and not path.startswith("/ui/")
+                and path != "/logout"
+            ):
                 headers = dict(kwargs.get("headers") or {})
                 headers.setdefault("X-CSRF-Token", TEST_CSRF_TOKEN)
                 kwargs["headers"] = headers

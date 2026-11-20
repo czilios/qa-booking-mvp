@@ -32,7 +32,7 @@ def test_bank_statement_report_includes_completed_booking_reservations(
     db_connection.commit()
 
     response = api_client.get(
-        "/api/bank-statement-report",
+        "/bank-statement-report",
         params={
             "start_date": "2027-10-01",
             "end_date": "2027-11-01",
@@ -89,7 +89,7 @@ def test_bank_statement_report_respects_date_boundaries(
     db_connection.commit()
 
     response = api_client.get(
-        "/api/bank-statement-report",
+        "/bank-statement-report",
         params={
             "start_date": "2027-10-01",
             "end_date": "2027-11-01",
@@ -142,7 +142,7 @@ def test_bank_statement_report_respects_accounting_included(
     db_connection.commit()
 
     response = api_client.get(
-        "/api/bank-statement-report",
+        "/bank-statement-report",
         params={
             "start_date": "2027-10-01",
             "end_date": "2027-11-01",
@@ -186,7 +186,7 @@ def test_bank_statement_report_excludes_non_accounting_reservation(
     db_connection.commit()
 
     response = api_client.get(
-        "/api/bank-statement-report",
+        "/bank-statement-report",
         params={
             "start_date": "2027-10-01",
             "end_date": "2027-11-01",
@@ -239,7 +239,7 @@ def test_bank_statement_report_excludes_test_reservations_and_keeps_real_ones(
     db_connection.commit()
 
     response = api_client.get(
-        "/api/bank-statement-report",
+        "/bank-statement-report",
         params={"start_date": "2027-10-01", "end_date": "2027-11-01"},
     )
 

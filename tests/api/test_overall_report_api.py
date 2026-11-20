@@ -30,7 +30,7 @@ def test_overall_report_includes_reservation(
 
 
     response = api_client.get(
-        "/api/overall-report",
+        "/overall-report",
         params={
             "start_date": "2044-10-01",
             "end_date": "2044-11-01",
@@ -81,7 +81,7 @@ def test_overall_report_includes_all_sources(
     db_connection.commit()
 
     response = api_client.get(
-        "/api/overall-report",
+        "/overall-report",
         params={
             "start_date": "2027-10-01",
             "end_date": "2027-11-01",
@@ -127,7 +127,7 @@ def test_overall_report_includes_non_accounting_reservation(
     db_connection.commit()
 
     response = api_client.get(
-        "/api/overall-report",
+        "/overall-report",
         params={
             "start_date": "2027-10-01",
             "end_date": "2027-11-01",
@@ -157,7 +157,7 @@ def test_overall_report_includes_bank_transaction_by_transaction_date(
         "end_date": "2026-08-01",
     }
     baseline_response = api_client.get(
-        "/api/overall-report",
+        "/overall-report",
         params=report_params,
     )
     assert baseline_response.status_code == 200
@@ -186,7 +186,7 @@ def test_overall_report_includes_bank_transaction_by_transaction_date(
     db_connection.commit()
 
     response = api_client.get(
-        "/api/overall-report",
+        "/overall-report",
         params=report_params,
     )
 

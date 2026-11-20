@@ -9,7 +9,7 @@ from app.database import get_test_connection
 
 def test_create_reservation_returns_201(api_client, db_connection):
     response = api_client.post(
-        "/api/reservations",
+        "/reservations",
         json={
             "cottage_id": 1,
             "source_id": 1,
@@ -49,7 +49,7 @@ def test_create_reservation_rejects_unavailable_cottage(
     )
 
     response = api_client.post(
-        "/api/reservations",
+        "/reservations",
         json={
             "cottage_id": 1,
             "source_id": 1,
@@ -62,7 +62,7 @@ def test_create_reservation_rejects_unavailable_cottage(
     assert response.status_code == 409
 def test_create_reservation_rejects_zero_guests(api_client):
     response = api_client.post(
-        "/api/reservations",
+        "/reservations",
         json={
             "cottage_id": 1,
             "source_id": 1,
@@ -78,7 +78,7 @@ def test_create_reservation_rejects_too_many_guests(
     api_client,
 ):
     response = api_client.post(
-        "/api/reservations",
+        "/reservations",
         json={
             "cottage_id": 1,
             "source_id": 1,
@@ -91,7 +91,7 @@ def test_create_reservation_rejects_too_many_guests(
     assert response.status_code == 409
 def test_create_reservation_rejects_negative_guests(api_client):
     response = api_client.post(
-        "/api/reservations",
+        "/reservations",
         json={
             "cottage_id": 1,
             "source_id": 1,
@@ -117,7 +117,7 @@ def test_create_reservation_with_customer_returns_201(
     )
 
     response = api_client.post(
-        "/api/reservations",
+        "/reservations",
         json={
             "customer_id": customer_id,
             "cottage_id": 1,
@@ -162,7 +162,7 @@ def test_get_reservation_returns_customer_id(
     )
 
     response = api_client.get(
-        f"/api/reservations/{reservation_id}"
+        f"/reservations/{reservation_id}"
     )
 
     assert response.status_code == 200
@@ -196,7 +196,7 @@ def test_get_reservation_returns_200(
     )
 
     response = api_client.get(
-        f"/api/reservations/{reservation_id}"
+        f"/reservations/{reservation_id}"
     )
 
     assert response.status_code == 200
@@ -418,7 +418,7 @@ def test_get_reservation_returns_404_for_nonexistent_reservation(
     api_client,
 ):
     response = api_client.get(
-        "/api/reservations/999999999"
+        "/reservations/999999999"
     )
 
     assert response.status_code == 404

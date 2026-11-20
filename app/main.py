@@ -651,7 +651,7 @@ def operator_logout(request: Request):
     return response
 
 
-@app.get("/api/availability")
+@app.get("/availability")
 def check_availability(
     request: Request,
     check_in: date,
@@ -705,7 +705,7 @@ def enforce_rate_limit(
         )
 
 
-@app.post("/api/inquiries", status_code=201)
+@app.post("/inquiries", status_code=201)
 def create_web_inquiry_endpoint(
     inquiry: WebInquiryCreate,
     request: Request,
@@ -829,7 +829,7 @@ def overall_report_ui(
         },
     )
 
-@app.post("/api/reservations", status_code=201)
+@app.post("/reservations", status_code=201)
 def create_reservation_endpoint(
     reservation: ReservationCreate,
 ):
@@ -861,7 +861,7 @@ def create_reservation_endpoint(
     except (TransactionOutcomeUnknown, TransactionRetryExhausted) as exc:
         _raise_transaction_http_error(exc)
 
-@app.put("/api/reservations/{reservation_id}")
+@app.put("/reservations/{reservation_id}")
 def update_reservation_endpoint(
     reservation_id: int,
     reservation: ReservationUpdate,
@@ -901,7 +901,7 @@ def update_reservation_endpoint(
 
     return {"message": "Reservation updated"}
 
-@app.get("/api/reservations/{reservation_id}")
+@app.get("/reservations/{reservation_id}")
 def get_reservation_endpoint(
     reservation_id: int,
     db_connection=Depends(get_db_connection),
@@ -919,7 +919,7 @@ def get_reservation_endpoint(
     return reservation
 
 
-@app.delete("/api/reservations/{reservation_id}", status_code=204)
+@app.delete("/reservations/{reservation_id}", status_code=204)
 def cancel_reservation_endpoint(
     reservation_id: int,
     db_connection=Depends(get_api_write_connection, scope="function"),
@@ -941,7 +941,7 @@ def cancel_reservation_endpoint(
             detail=str(exc),
         )
 
-@app.post("/api/payments", status_code=201)
+@app.post("/payments", status_code=201)
 def create_payment_endpoint(
     payment: PaymentCreate,
     db_connection=Depends(get_api_write_connection, scope="function"),
@@ -966,7 +966,7 @@ def create_payment_endpoint(
             detail=str(exc),
         )
 
-@app.get("/api/payments/report")
+@app.get("/payments/report")
 def get_payment_report_endpoint(
     start_date: date,
     end_date: date,
@@ -988,7 +988,7 @@ def get_payment_report_endpoint(
         source_code=source_code,
     )
 
-@app.get("/api/payments/{payment_id}")
+@app.get("/payments/{payment_id}")
 def get_payment_endpoint(
     payment_id: int,
     db_connection=Depends(get_db_connection),
@@ -1005,7 +1005,7 @@ def get_payment_endpoint(
 
     return payment
 
-@app.put("/api/payments/{payment_id}/paid")
+@app.put("/payments/{payment_id}/paid")
 def mark_payment_as_paid_endpoint(
     payment_id: int,
     payment: PaymentPaid,
@@ -1031,7 +1031,7 @@ def mark_payment_as_paid_endpoint(
 
     return {"message": "Payment marked as paid"}
 
-@app.post("/api/customers", status_code=201)
+@app.post("/customers", status_code=201)
 def create_customer_endpoint(
     customer: CustomerCreate,
     db_connection=Depends(get_api_write_connection, scope="function"),
@@ -1054,7 +1054,7 @@ def create_customer_endpoint(
             status_code=400,
             detail=str(exc),
         )
-@app.get("/api/customers/{customer_id}")
+@app.get("/customers/{customer_id}")
 def get_customer_endpoint(
     customer_id: int,
     db_connection=Depends(get_db_connection),
@@ -1075,7 +1075,7 @@ def get_customer_endpoint(
             status_code=400,
             detail=str(exc),
         )
-@app.put("/api/customers/{customer_id}")
+@app.put("/customers/{customer_id}")
 def update_customer_endpoint(
     customer_id: int,
     customer: CustomerCreate,
@@ -1292,7 +1292,7 @@ def cancel_reservation_ui(
         status_code=303,
     )
 
-@app.get("/api/bank-statement-report")
+@app.get("/bank-statement-report")
 def get_bank_statement_report(
     start_date: date,
     end_date: date,
@@ -1336,7 +1336,7 @@ def bank_statement_report_ui(
         },
     )
 
-@app.get("/api/overall-report")
+@app.get("/overall-report")
 def get_overall_report(
     start_date: date,
     end_date: date,
@@ -1938,7 +1938,7 @@ def update_web_inquiry_status_ui(
         redirect_url += f"#inquiry-{inquiry_id}"
     return RedirectResponse(url=redirect_url, status_code=303)
 
-@app.get("/api/sales-report")
+@app.get("/sales-report")
 def get_sales_report(
     start_date: date,
     end_date: date,

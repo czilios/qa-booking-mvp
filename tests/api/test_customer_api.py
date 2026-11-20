@@ -6,7 +6,7 @@ from app.repositories.customer_repository import CustomerRepository
 
 def test_create_customer_returns_201(api_client, db_connection):
     response = api_client.post(
-        "/api/customers",
+        "/customers",
         json={
             "first_name": "Jan",
             "last_name": "Kowalski",
@@ -26,7 +26,7 @@ def test_create_customer_returns_201(api_client, db_connection):
 
 def test_create_customer_normalizes_phone(api_client):
     response = api_client.post(
-        "/api/customers",
+        "/customers",
         json={
             "first_name": "Jan",
             "last_name": "Kowalski",
@@ -52,7 +52,7 @@ def test_get_customer_returns_200(api_client, db_connection):
     )
 
     response = api_client.get(
-        f"/api/customers/{customer_id}"
+        f"/customers/{customer_id}"
     )
 
     assert response.status_code == 200
@@ -67,7 +67,7 @@ def test_get_customer_returns_200(api_client, db_connection):
 
 def test_get_customer_returns_404_for_nonexistent_customer(api_client):
     response = api_client.get(
-        "/api/customers/999999"
+        "/customers/999999"
     )
 
     assert response.status_code == 404
@@ -84,7 +84,7 @@ def test_update_customer_returns_200(api_client, db_connection):
     )
 
     response = api_client.put(
-        f"/api/customers/{customer_id}",
+        f"/customers/{customer_id}",
         json={
             "first_name": "Jan",
             "last_name": "Kowalski",

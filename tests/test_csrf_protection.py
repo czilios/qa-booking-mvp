@@ -32,7 +32,7 @@ class FakeConnection:
         self.closed = True
 
 
-def _authenticated_client(monkeypatch, *, expected_csrf=CSRF_TOKEN):
+def _authenticated_client(monkeypatch, *, expected_csrf=CSRF_TOKEN, root_path=""):
     monkeypatch.setenv("APP_ENV", "test")
     monkeypatch.setenv("SESSION_COOKIE_SECURE", "false")
     auth_connection = FakeConnection()
@@ -46,7 +46,7 @@ def _authenticated_client(monkeypatch, *, expected_csrf=CSRF_TOKEN):
             "csrf_token_hash": hash_csrf_token(expected_csrf),
         },
     )
-    client = TestClient(main.app)
+    client = TestClient(main.app, root_path=root_path)
     client.cookies.set(SESSION_COOKIE_NAME, SESSION_TOKEN)
     client.cookies.set(CSRF_COOKIE_NAME, expected_csrf)
     return client, auth_connection
@@ -72,12 +72,12 @@ def test_api_write_requires_csrf_header_and_accepts_matching_session_token(monke
     client, auth_connection = _authenticated_client(monkeypatch)
     payload = {"first_name": "Test", "last_name": "Operator"}
 
-    missing = client.post("/api/customers", json=payload)
+    missing = client.post("/customers", json=payload)
     invalid = client.post(
-        "/api/customers", json=payload, headers={"X-CSRF-Token": "invalid"}
+        "/customers", json=payload, headers={"X-CSRF-Token": "invalid"}
     )
     valid = client.post(
-        "/api/customers", json=payload, headers={"X-CSRF-Token": CSRF_TOKEN}
+        "/customers", json=payload, headers={"X-CSRF-Token": CSRF_TOKEN}
     )
 
     assert missing.status_code == 403
@@ -91,13 +91,31 @@ def test_api_rejects_csrf_token_bound_to_another_session(monkeypatch):
     client, _ = _authenticated_client(monkeypatch, expected_csrf=CSRF_TOKEN)
 
     response = client.post(
-        "/api/customers",
+        "/customers",
         json={"first_name": "Test", "last_name": "Operator"},
         headers={"X-CSRF-Token": OTHER_CSRF_TOKEN},
     )
 
     assert response.status_code == 403
     assert response.json() == {"detail": "CSRF token is missing or invalid."}
+
+
+def test_api_csrf_remains_enforced_with_root_path(monkeypatch):
+    client, _ = _authenticated_client(monkeypatch, root_path="/api")
+
+    missing = client.post(
+        "/api/customers",
+        json={"first_name": "Test", "last_name": "Operator"},
+    )
+    invalid = client.post(
+        "/api/customers",
+        json={"first_name": "Test", "last_name": "Operator"},
+        headers={"X-CSRF-Token": "invalid"},
+    )
+
+    assert missing.status_code == 403
+    assert invalid.status_code == 403
+    assert missing.json() == {"detail": "CSRF token is missing or invalid."}
 
 
 def test_session_without_csrf_hash_must_authenticate_again(monkeypatch):
@@ -111,7 +129,7 @@ def test_session_without_csrf_hash_must_authenticate_again(monkeypatch):
     client = TestClient(main.app)
     client.cookies.set(SESSION_COOKIE_NAME, SESSION_TOKEN)
 
-    response = client.get("/api/reservations/10")
+    response = client.get("/reservations/10")
 
     assert response.status_code == 401
     assert response.json() == {"detail": "Authentication required."}
@@ -191,7 +209,7 @@ def test_authenticated_get_needs_no_submitted_csrf_token(monkeypatch):
     client, _ = _authenticated_client(monkeypatch)
     client.cookies.delete(CSRF_COOKIE_NAME)
 
-    response = client.get("/api/customers/10")
+    response = client.get("/customers/10")
 
     assert response.status_code == 200
     assert response.json()["id"] == 10
@@ -257,7 +275,7 @@ def test_public_inquiry_post_remains_available_without_operator_csrf(monkeypatch
     client = TestClient(main.app)
 
     response = client.post(
-        "/api/inquiries",
+        "/inquiries",
         json={
             "full_name": "Test Visitor",
             "phone": "+48600999111",
